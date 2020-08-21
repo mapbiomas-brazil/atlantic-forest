@@ -74,7 +74,6 @@ var vis = {
 Map.addLayer(imc_carta2, vis, 'class_2018', false)
 
 
-
 //==================Edicao Usuario====================================================================
 //Trocar o asset abaixo
 var palettes = require('users/mapbiomas/modules:Palettes.js');
