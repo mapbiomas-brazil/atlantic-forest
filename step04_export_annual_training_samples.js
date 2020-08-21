@@ -144,6 +144,5 @@ for (var i_ano=0;i_ano<anos.length; i_ano++){
   }    
 
 Export.table.toAsset(training_reg, 'pontos_exp2_'+versao+'_'+ano+'_mos4_35bandas', dirout + 'pontos_exp2_'+versao+'_'+ano+'_mos4_35bandas');  
-
   
 }
