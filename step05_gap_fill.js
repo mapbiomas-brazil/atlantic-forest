@@ -20,7 +20,7 @@ var visParMedian2 = {'bands':['median_swir1','median_nir','median_red'], 'gain':
                       .filterMetadata('biome', 'equals', "MATAATLANTICA")
                       .filterMetadata('year', 'equals', 2000 )
                       .mosaic()
-    Map.addLayer(mosaicoTotal, visParMedian2, 'Img_Year_2000', false);
+   Map.addLayer(mosaicoTotal, visParMedian2, 'Img_Year_2000', false);
 
 
 ////*************************************************************
