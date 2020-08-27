@@ -1,11 +1,13 @@
-# Atlantic Forest
-Developed by  ArcPlan - mrosa@arcplan.com.br
+<div class="fluid-row" id="header">
+    <img src='./misc/arcplan-logo.jpeg' height='70' width='auto' align='right'>
+    <h1 class="title toc-ignore">Atlantic Forest</h1>
+    <h4 class="author"><em>Developed by  ArcPlan - mrosa@arcplan.com.br</em></h4>
+</div>
 
 # About
 This folder contains the scripts to classify and post-process the Atlantic Forest Biome.
 
 We recommend that you read the Atlantic Forest Biome Appendix of the Algorithm Theoretical Basis Document (ATBD).
-
 
 # How to use
 First, you need to copy these scripts (including those in utils folder) to your Google Earth Engine (GEE) account.
