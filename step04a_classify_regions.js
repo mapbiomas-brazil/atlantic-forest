@@ -1,4 +1,3 @@
-
 var regiao = 'reg_01'
 var version = '15'
 var version_out = 14
