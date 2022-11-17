@@ -1,0 +1,150 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+var dirout = 'projects/mapbiomas-workspace/AMOSTRAS/col7/MATA_ATLANTICA/'
+var v_estavel_in = '1'
+var version_out = '3'
+
+var year = 2019
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {'min': 0,'max': 45,'palette': palettes.get('classification5')};
+
+
+var colecao6 = ee.Image('projects/mapbiomas-workspace/public/collection5/mapbiomas_collection50_integration_v1')
+Map.addLayer(colecao6.select('classification_2019'), vis, 'Classes ORIGINAIS 85 a 20', false);
+
+
+var estaveis_v1 = ee.Image(dirout+'MA_amostras_estaveis85a20_col6_v'+v_estavel_in)
+Map.addLayer(estaveis_v1, vis, 'estaveis_v1 col6', false);
+
+var SEMA_MG = ee.ImageCollection('projects/mapbiomas-workspace/VALIDACAO/MATA_ATLANTICA/MG_IEF').mosaic()
+SEMA_MG = SEMA_MG.remap(
+                  [3, 4, 5, 9,11,12,13,15,18,19,20,36,39,41,21,22,23,24,25,26,29,30,31,32,33],
+                  [3, 4, 3, 9,11,12,13,21,21,21,21,21,21,21,21,22,22,22,22,33,29,22,33,13,33])
+Map.addLayer(SEMA_MG, vis, 'SEMA_MG', false);
+
+var SEMA_ES = ee.Image('projects/mapbiomas-workspace/VALIDACAO/MATA_ATLANTICA/ES_SEMA_IDMapBiomas_15m')
+SEMA_ES = SEMA_ES.remap(
+                  [3, 4, 5, 9,11,12,13,15,18,19,20,36,39,41,21,22,23,24,25,26,29,30,31,32,33],
+                  [3, 4, 3, 9,11,12,13,21,21,21,21,21,21,21,21,22,22,22,22,33,29,22,33,13,33])
+Map.addLayer(SEMA_ES, vis, 'SEMA_ES', false);
+
+var SEMA_PR = ee.Image('projects/mapbiomas-workspace/VALIDACAO/MATA_ATLANTICA/PR_Sema_LULC_10m_ids_MapBiomas3')
+SEMA_PR = SEMA_PR.remap(
+                  [3, 4, 5, 9,11,12,13,15,18,19,20,36,39,41,21,22,23,24,25,26,29,30,31,32,33],
+                  [3, 4, 3, 9,11,12,13,21,21,21,21,21,21,21,21,22,22,22,22,33,29,22,33,13,33])
+Map.addLayer(SEMA_PR, vis, 'SEMA_PR', false);
+
+var SEMA_SP = ee.Image('projects/mapbiomas-workspace/VALIDACAO/MATA_ATLANTICA/SP_IF_2020_2')
+SEMA_SP = SEMA_SP.remap(
+                  [3, 4, 5, 9,11,12,13,15,18,19,20,36,39,41,21,22,23,24,25,26,29,30,31,32,33],
+                  [3, 4, 3, 9,11,12,13,21,21,21,21,21,21,21,21,22,22,22,22,33,29,22,33,13,33])
+Map.addLayer(SEMA_SP, vis, 'SEMA_SP', false);
+
+
+//Corrige MG
+var savanaMG = SEMA_MG.remap([4],[100])
+savanaMG = savanaMG.add(estaveis_v1).remap([103],[4])
+Map.addLayer(savanaMG, [], 'savanaMG', false);
+
+var apaga21MG = SEMA_MG.remap([3,4,9,11,12,13,29,22],[100,100,100,100,100,100,100,100])
+apaga21MG = apaga21MG.add(estaveis_v1).remap([121],[27])
+Map.addLayer(apaga21MG, [], 'apaga21MG', false);
+
+var apaga3MG = SEMA_MG.remap([4,9,11,12,13,29,21,22],[100,100,100,100,100,100,100,100])
+apaga3MG = apaga3MG.add(estaveis_v1).remap([103],[27])
+Map.addLayer(apaga21MG, [], 'apaga21MG', false);
+
+var complementoMG = SEMA_MG.remap([11,12,29],[11,12,29])
+
+
+//Corrige ES
+var apaga21ES = SEMA_ES.remap([3,4,9,11,12,13,29,22],[100,100,100,100,100,100,100,100])
+apaga21ES = apaga21ES.add(estaveis_v1).remap([121],[27])
+Map.addLayer(apaga21ES, [], 'apaga21ES', false);
+
+var apaga3ES = SEMA_ES.remap([4,9,11,12,13,29,21,22],[100,100,100,100,100,100,100,100])
+apaga3ES = apaga3ES.add(estaveis_v1).remap([103],[27])
+Map.addLayer(apaga3ES, [], 'apaga3ES', false);
+
+var complementoES = SEMA_ES.remap([11,12,29],[11,12,29])
+
+var estaveis_v2 = estaveis_v1.blend(savanaMG).blend(complementoMG).blend(apaga21MG).blend(apaga3MG)
+    .blend(apaga21ES).blend(apaga3ES).blend(complementoES)
+Map.addLayer(estaveis_v2, vis, 'estaveis_v2', false);
+
+
+//Corrige PR
+var apaga21PR = SEMA_PR.remap([3,4,9,11,12,13,29,22],[100,100,100,100,100,100,100,100])
+apaga21PR = apaga21PR.add(estaveis_v1).remap([121],[27])
+Map.addLayer(apaga21PR, [], 'apaga21PR', false);
+
+var apaga3PR = SEMA_PR.remap([4,9,11,12,13,29,21,22],[100,100,100,100,100,100,100,100])
+apaga3PR = apaga3PR.add(estaveis_v1).remap([103],[27])
+Map.addLayer(apaga3PR, [], 'apaga3PR', false);
+
+var complementoPR = SEMA_PR.remap([11,12,29],[11,12,29])
+
+//Corrige SP
+var apaga21SP = SEMA_SP.remap([3,4,5,11,12,29],[100,100,100,100,100,100])
+apaga21SP = apaga21SP.add(estaveis_v1).remap([121],[27])
+Map.addLayer(apaga21SP, [], 'apaga21SP', false);
+
+var apaga3SP = SEMA_SP.remap([4,9,11,12,29],[100,100,100,100,100])
+apaga3SP = apaga3SP.add(estaveis_v1).remap([103],[27])
+Map.addLayer(apaga3SP, [], 'apaga3SP', false);
+
+var complementoSP = SEMA_SP.remap([11,12,29],[11,12,29])
+
+var estaveis_v2 = estaveis_v1
+    .blend(savanaMG).blend(apaga21MG).blend(apaga3MG).blend(complementoMG)
+    .blend(apaga21ES).blend(apaga3ES).blend(complementoES)
+    .blend(apaga21PR).blend(apaga3PR).blend(complementoPR)
+    .blend(apaga21SP).blend(apaga3SP).blend(complementoSP)
+Map.addLayer(estaveis_v2, vis, 'estaveis_v2', false);
+
+
+
+var GEDI = ee.Image('users/potapovpeter/GEDI_V27/GEDI_SAM_v27').clip(limite_MA).rename('GEDI');
+
+var imageVisGEDI = {"min": 0,"max": 15,"palette":["c9f5f1","#ffbeee","#daffe0","#c0debf","08ff04","#037e07","0b240a"]};
+Map.addLayer(GEDI, imageVisGEDI,'GEDI', false);
+
+var am_flo_gedi = GEDI.gte(9).remap([1],[100],0)
+Map.addLayer(am_flo_gedi, {"palette":["037e07"]},'GEDI_Floresta', false);
+  
+var am_cam_gedi = GEDI.lt(7).remap([1],[200],0)
+Map.addLayer(am_cam_gedi, {"palette":["806316"]},'GEDI_Campo', false);
+ 
+var estavel_GEDI = estaveis_v2.add(am_flo_gedi).add(am_cam_gedi)
+Map.addLayer(estavel_GEDI, vis, 'estavel_GEDI', false);
+
+estavel_GEDI = estavel_GEDI.remap(
+  [103,104,109,111,112,113,121,122,129,133,
+   203,204,209,211,212,213,221,222,229,233],
+  [  3,  0,  9,  0,  0,  0,  0,  0,  0,  0,
+     0,  4,  9, 11, 12, 13, 21, 22, 29, 33],0 ).rename('reference')
+ 
+Map.addLayer(estavel_GEDI, vis, 'estavel_GEDI', false);
+
+Export.image.toAsset({
+    "image": estaveis_v2.toInt8(),
+    "description": 'MA_amostras_estaveis85a20_col6_v'+version_out,
+    "assetId": dirout + 'MA_amostras_estaveis85a20_col6_v'+version_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});  
+
