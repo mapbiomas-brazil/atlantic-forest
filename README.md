@@ -8,9 +8,10 @@
 This folder contains the scripts to classify and post-process the Atlantic Forest Biome.
 
 We recommend that you read the Atlantic Forest Biome Appendix of the Algorithm Theoretical Basis Document (ATBD).
+[Link to ATBD](https://LINKLINK)
 
 # How to use
-First, you need to copy these scripts (including those in utils folder) to your Google Earth Engine (GEE) account.
+First, you need to copy these scripts (including those in p04 folder) to your Google Earth Engine (GEE) account.
 
 # Pre-processing
 Step01: build stable pixels from Colleciton 4.1 and save a new asset. 
