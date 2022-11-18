@@ -1,0 +1,87 @@
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-56.05851880152852, -30.04613371617718],
+          [-49.20305005152852, -30.841736663987348],
+          [-41.46867505152852, -23.861579784474333],
+          [-34.17375317652852, -8.163484389272043],
+          [-34.26164380152852, -4.801825741437062],
+          [-35.66789380152852, -4.582835761516412],
+          [-49.07121411402852, -16.947367124654484],
+          [-56.10246411402852, -21.01873071079243]]]);
+
+var vesion_in = '5'
+var version_out = "5"
+var prefixo_in = 'MA_col6_p06_v'
+var prefixo_out = 'MA_col6_p07_v'
+
+var dirout = 'projects/mapbiomas-workspace/COLECAO6/classificacao-test/'
+
+var class4 =  ee.Image(dirout+prefixo_in+vesion_in)
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};var vis2 = {
+    'bands': 'classification_2020',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+var filtrofreq = function(mapbiomas){
+
+  var exp = '100*((b(0)+b(1)+b(2)+b(3)+b(4)+b(5)+b(6)+b(7)+b(8)+b(9)+b(10)+b(11)+b(12)+b(13)+b(14)+b(15)' +
+      '+b(16)+b(17)+b(18)+b(19)+b(20)+b(21)+b(22)+b(23)+b(24)+b(25)+b(26)+b(27)+b(28)+b(29)+b(30)+b(31)+b(32)+b(33)+b(34)+b(35))/36 )';
+  
+  // get frequency
+  var floFreq = mapbiomas.eq(3).expression(exp);
+  var savFreq = mapbiomas.eq(4).expression(exp);
+  var umdFreq = mapbiomas.eq(11).expression(exp);
+  var graFreq = mapbiomas.eq(12).expression(exp);
+  var resFreq = mapbiomas.eq(13).expression(exp);
+  var aflFreq = mapbiomas.eq(29).expression(exp);
+
+  var vegMask = ee.Image(0).where((floFreq.add(savFreq).add(umdFreq).add(graFreq).add(resFreq).add(aflFreq)).gt(99), 1) //.add(aguFreq)
+  
+
+  var  vegMap = ee.Image(0)
+                          .where(vegMask.eq(1).and(savFreq.gt(20)), 4)
+                          .where(vegMask.eq(1).and(graFreq.gt(20)), 12)
+                          .where(vegMask.eq(1).and(resFreq.gt(20)), 13)
+                          .where(vegMask.eq(1).and(aflFreq.gt(20)), 29)
+                          .where(vegMask.eq(1).and(floFreq.gt(80)), 3)
+                          .where(vegMask.eq(1).and(umdFreq.gt(20)), 11)
+
+  vegMap = vegMap.updateMask(vegMap.neq(0))
+  Map.addLayer(vegMap, vis, 'vegetacao estavel', true);
+
+  var saida = mapbiomas.where(vegMap, vegMap)
+
+  return saida;
+}
+
+
+  
+  var saida = filtrofreq(class4)
+
+
+Map.addLayer(class4, vis2, 'image');
+
+Map.addLayer(saida, vis2, 'filtered');
+
+
+Export.image.toAsset({
+    'image': saida,
+    'description': 'PANT-RF85a19v3j_rev',
+    'description': prefixo_out+version_out,
+    'assetId': dirout+prefixo_out+version_out,
+    'pyramidingPolicy': {
+        '.default': 'mode'
+    },
+    'region': geometry,
+    'scale': 30,
+    'maxPixels': 1e13
+});

@@ -1,0 +1,190 @@
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-56.05851880152852, -30.04613371617718],
+          [-49.20305005152852, -30.841736663987348],
+          [-41.46867505152852, -23.861579784474333],
+          [-34.17375317652852, -8.163484389272043],
+          [-34.26164380152852, -4.801825741437062],
+          [-35.66789380152852, -4.582835761516412],
+          [-49.07121411402852, -16.947367124654484],
+          [-56.10246411402852, -21.01873071079243]]]);
+
+var version_region_in = 3
+var vesion_out = 'v5'
+var VeightConnected = true
+var prefixo_out = 'MA_col6_p05_'
+var dircol6 = 'projects/mapbiomas-workspace/COLECAO6/classificacao-test'
+var dirout = 'projects/mapbiomas-workspace/COLECAO6/classificacao-test/'
+
+var ano = 1990
+var bioma = "MATAATLANTICA";
+
+var visParMedian2 = {'bands':['median_swir1','median_nir','median_red'], 'gain':[0.08, 0.06,0.2],'gamma':0.5 };
+var visParMedian2 = {bands: ['swir1_median', 'nir_median', 'red_median'],gain: [0.08, 0.06, 0.2],gamma: 0.85}
+
+
+////*************************************************************
+// Do not Change from these lines
+////*************************************************************
+
+
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+var image = ee.ImageCollection(dircol6)
+            .filterMetadata('version', 'equals', version_region_in)
+            .filterMetadata('collection', 'equals', '6')
+            .filterMetadata('biome', 'equals', bioma)
+            .min()
+            
+image = image.mask(image.neq(0))
+print(image)
+var years = [
+    1985, 1986, 1987, 1988,
+    1989, 1990, 1991, 1992,
+    1993, 1994, 1995, 1996,
+    1997, 1998, 1999, 2000,
+    2001, 2002, 2003, 2004,
+    2005, 2006, 2007, 2008,
+    2009, 2010, 2011, 2012,
+    2013, 2014, 2015, 2016,
+    2017, 2018, 2019,2020];
+
+/**
+ * User defined functions
+ */
+var applyGapFill = function (image) {
+
+    // apply the gap fill form t0 until tn
+    var imageFilledt0tn = bandNames.slice(1)
+        .iterate(
+            function (bandName, previousImage) {
+
+                var currentImage = image.select(ee.String(bandName));
+
+                previousImage = ee.Image(previousImage);
+
+                currentImage = currentImage.unmask(
+                    previousImage.select([0]));
+
+                return currentImage.addBands(previousImage);
+
+            }, ee.Image(imageAllBands.select([bandNames.get(0)]))
+        );
+
+    imageFilledt0tn = ee.Image(imageFilledt0tn);
+
+    // apply the gap fill form tn until t0
+    var bandNamesReversed = bandNames.reverse();
+
+    var imageFilledtnt0 = bandNamesReversed.slice(1)
+        .iterate(
+            function (bandName, previousImage) {
+
+                var currentImage = imageFilledt0tn.select(ee.String(bandName));
+
+                previousImage = ee.Image(previousImage);
+
+                currentImage = currentImage.unmask(
+                    previousImage.select(previousImage.bandNames().length().subtract(1)));
+
+                return previousImage.addBands(currentImage);
+
+            }, ee.Image(imageFilledt0tn.select([bandNamesReversed.get(0)]))
+        );
+
+
+    imageFilledtnt0 = ee.Image(imageFilledtnt0).select(bandNames);
+
+    return imageFilledtnt0;
+};
+
+// get band names list 
+var bandNames = ee.List(
+    years.map(
+        function (year) {
+            return 'classification_' + String(year);
+        }
+    )
+);
+
+// generate a histogram dictionary of [bandNames, image.bandNames()]
+var bandsOccurrence = ee.Dictionary(
+    bandNames.cat(image.bandNames()).reduce(ee.Reducer.frequencyHistogram())
+);
+
+print(bandsOccurrence);
+
+// insert a masked band 
+var bandsDictionary = bandsOccurrence.map(
+    function (key, value) {
+        return ee.Image(
+            ee.Algorithms.If(
+                ee.Number(value).eq(2),
+                image.select([key]).byte(),
+                ee.Image().rename([key]).byte().updateMask(image.select(0))
+            )
+        );
+    }
+);
+
+// convert dictionary to image
+var imageAllBands = ee.Image(
+    bandNames.iterate(
+        function (band, image) {
+            return ee.Image(image).addBands(bandsDictionary.get(ee.String(band)));
+        },
+        ee.Image().select()
+    )
+);
+
+// generate image pixel years
+var imagePixelYear = ee.Image.constant(years)
+    .updateMask(imageAllBands)
+    .rename(bandNames);
+
+// apply the gap fill
+var imageFilledtnt0 = applyGapFill(imageAllBands);
+var imageFilledYear = applyGapFill(imagePixelYear);
+
+
+
+Map.addLayer(image.select('classification_'+ano), vis, 'image',false);
+
+
+Map.addLayer(imageFilledtnt0.select('classification_'+ano), vis, 'filtered'); //.mask(bioma250mil_MA)
+
+imageFilledtnt0 = imageFilledtnt0.set('vesion', '2');
+
+
+// add connected pixels bands
+var imageFilledConnected = imageFilledtnt0.addBands(
+    imageFilledtnt0
+        .connectedPixelCount(100, true)
+        .rename(bandNames.map(
+            function (band) {
+                return ee.String(band).cat('_conn')
+            }
+        ))
+);
+
+
+Export.image.toAsset({
+    'image': imageFilledConnected,
+    'description': prefixo_out+vesion_out,
+    'assetId': dirout+prefixo_out+vesion_out,
+    'pyramidingPolicy': {
+        '.default': 'mode'
+    },
+    'region': geometry,
+    'scale': 30,
+    'maxPixels': 1e13
+});
+

@@ -1,0 +1,172 @@
+var versao_out = 'v2'
+var versao_pt = 'v2'
+var dirout = 'projects/mapbiomas-workspace/AMOSTRAS/col6/MATA_ATLANTICA/SAMPLES/';
+
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+var regioesCollection = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/Mata_Atlantica_regions_col5_250mil')
+Map.addLayer(regioesCollection)
+
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+var vis = {
+    'min': 0,
+    'max': 34,
+    'palette': palettes.get('classification2')
+};
+
+var ano = 2000
+var bioma = "MATAATLANTICA";
+
+var pts = ee.FeatureCollection('projects/mapbiomas-workspace/AMOSTRAS/col6/MATA_ATLANTICA/SAMPLES/samples_stable_' + versao_pt + '_reg')
+
+var dirasset = 'projects/nexgenmap/MapBiomas2/LANDSAT/mosaics';
+var dirasset7 = 'projects/nexgenmap/MapBiomas2/LANDSAT/mosaics-landsat-7';
+
+var anos = [
+            1985,1986,1987,1988,1989,
+            // 1990,1991,1992,1993,1994,
+            // 1995,1996,1997,1998,1999,
+            // 2000,2001,2002,2003,2004,
+            // 2005,2006,2007,2008,2009,
+            // 2010,2011,2012,2013,2014,
+            // 2015,2016,2017,2018,2019,2020
+            ];
+    var ndvi_color = '0f330f, 005000, 4B9300, 92df42, bff0bf, FFFFFF, eee4c7, ecb168, f90000'
+    var visParNDFI_amp = {'min':0, 'max':300, 'palette':ndvi_color};
+
+
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+
+  if      (ano == 1985) {
+    var ano1 = 1985; var ano2 = 1986; var ano3 = 1987
+    var asset1 = dirasset; var asset2 = dirasset; var asset3 = dirasset
+  }
+  else if (ano == 1986) {
+    var ano1 = 1986; var ano2 = 1985; var ano3 = 1987
+    var asset1 = dirasset; var asset2 = dirasset; var asset3 = dirasset
+  }
+  else if (ano == 2000) {
+    var ano1 = 2000; var ano2 = 1999; var ano3 = 1998
+    var asset1 = dirasset7; var asset2 = dirasset; var asset3 = dirasset
+  }
+  else if (ano == 2001)   {
+    var ano1 = 2001; var ano2 = 2000; var ano3 = 1999
+    var asset1 = dirasset7; var asset2 = dirasset7; var asset3 = dirasset
+  }
+  else if (ano == 2002) {
+    var ano1 = 2002; var ano2 = 2001; var ano3 = 2000
+    var asset1 = dirasset7; var asset2 = dirasset7; var asset3 = dirasset7
+  }
+  else if (ano == 2003) {
+    var ano1 = 2003; var ano2 = 2002; var ano3 = 2001
+    var asset1 = dirasset; var asset2 = dirasset7; var asset3 = dirasset7
+  }
+  else if (ano == 2004) {
+    var ano1 = 2004; var ano2 = 2003; var ano3 = 2002
+    var asset1 = dirasset; var asset2 = dirasset; var asset3 = dirasset7
+  }
+  else if (ano == 2012) {
+    var ano1 = 2012; var ano2 = 2011; var ano3 = 2010
+    var asset1 = dirasset7; var asset2 = dirasset; var asset3 = dirasset
+  }
+  else if (ano == 2013) {
+    var ano1 = 2013; var ano2 = 2012; var ano3 = 2011
+    var asset1 = dirasset; var asset2 = dirasset7; var asset3 = dirasset
+  }
+  else if (ano == 2014) {
+    var ano1 = 2014; var ano2 = 2013; var ano3 = 2012
+    var asset1 = dirasset; var asset2 = dirasset; var asset3 = dirasset7
+  }
+  else {
+    var ano1 = ano; var ano2 = ( ano - 1); var ano3 = ( ano - 2)
+    var asset1 = dirasset; var asset2 = dirasset; var asset3 = dirasset
+  }
+
+
+  var regioes_lista = [
+      ['reg_01'],['reg_02'],['reg_03'],['reg_04'],['reg_05'],['reg_06'],['reg_07'],['reg_08'],['reg_09'],['reg_10'],['reg_11'],['reg_12'],['reg_13'],['reg_14'],['reg_15'],
+      ['reg_16'],['reg_17'],['reg_18'],['reg_19'],['reg_20'],['reg_21'],['reg_22'],['reg_23'],['reg_24'],['reg_25'],['reg_26'],['reg_27'],['reg_28'],['reg_29'],['reg_30']
+      ]
+  
+  for (var i_regiao=0;i_regiao<regioes_lista.length; i_regiao++){
+    var lista = regioes_lista[i_regiao];
+    var regiao = lista[0];
+
+    var limite = regioesCollection.filterMetadata('reg_id', "equals", regiao);
+    
+    var mosaicoTotal = ee.ImageCollection(asset1)
+                        .filterMetadata('biome', 'equals', bioma)
+                        .filterMetadata('year', 'equals', ano1)
+                        .filterMetadata('version','equals','2')
+                        .filterBounds(limite)
+                        .mosaic()
+
+    var mosaico1ano_antes = ee.ImageCollection(asset2)
+                      .filterMetadata('biome', 'equals', bioma)
+                      .filterMetadata('year', 'equals', ano2)
+                      .filterMetadata('version','equals','2')
+                      .filterBounds(limite)
+                      .mosaic()
+
+    var mosaico2anos_antes = ee.ImageCollection(asset3)
+                      .filterMetadata('biome', 'equals', bioma)
+                      .filterMetadata('year', 'equals', ano3)
+                      .filterMetadata('version','equals','2')
+                      .filterBounds(limite)
+                      .mosaic()
+                      
+    var min3anos = ee.ImageCollection.fromImages([mosaicoTotal.select('ndvi_median'),
+                                                  mosaico1ano_antes.select('ndvi_median'),
+                                                  mosaico2anos_antes.select('ndvi_median')]).min()
+    
+    var max3anos = ee.ImageCollection.fromImages([mosaicoTotal.select('ndvi_median_wet'),
+                                                  mosaico1ano_antes.select('ndvi_median_wet'),
+                                                  mosaico2anos_antes.select('ndvi_median_wet')]).max()
+
+    var amp3anos_ndvi = max3anos.subtract(min3anos).rename('amp_ndvi_3anos')
+    mosaicoTotal = mosaicoTotal.addBands(amp3anos_ndvi)
+
+    var min3anos = ee.ImageCollection.fromImages([mosaicoTotal.select('ndfi_median_wet'),
+                                                  mosaico1ano_antes.select('ndfi_median_wet'),
+                                                  mosaico2anos_antes.select('ndfi_median_wet')]).min()
+    
+    var max3anos = ee.ImageCollection.fromImages([mosaicoTotal.select('ndfi_median_wet'),
+                                                  mosaico1ano_antes.select('ndfi_median_wet'),
+                                                  mosaico2anos_antes.select('ndfi_median_wet')]).max()
+
+    var amp3anos_ndfi = max3anos.subtract(min3anos).rename('amp_nfvi_3anos')
+    mosaicoTotal = mosaicoTotal.addBands(amp3anos_ndfi)
+
+     var ll = ee.Image.pixelLonLat()
+    
+    var long = ll.select('longitude').add(34.8).multiply(-1).multiply(1000).toInt16()
+    var lati = ll.select('latitude').add(5).multiply(-1).multiply(1000).toInt16()
+    
+    mosaicoTotal = mosaicoTotal.addBands(long.rename('longitude'))
+    mosaicoTotal = mosaicoTotal.addBands(lati.rename('latitude' ))
+
+    var pts_reg = pts.filterMetadata('reg_id', 'equals', regiao)
+
+    var training = mosaicoTotal.sampleRegions({
+        'collection': pts_reg,
+        'scale': 30,
+        'tileScale': 4,
+        'geometries': true
+    });
+      
+    if (i_regiao == 0){ var training_reg = training }  
+    else {training_reg = training_reg.merge(training); }
+  }    
+
+Export.table.toAsset(training_reg, 'pontos_train_'+versao_out+'_'+ano, dirout + 'pontos_train_'+versao_out+'_'+ano);  
+
+  
+}

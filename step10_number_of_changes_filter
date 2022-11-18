@@ -1,0 +1,134 @@
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-56.05851880152852, -30.04613371617718],
+          [-49.20305005152852, -30.841736663987348],
+          [-41.46867505152852, -23.861579784474333],
+          [-34.17375317652852, -8.163484389272043],
+          [-34.26164380152852, -4.801825741437062],
+          [-35.66789380152852, -4.582835761516412],
+          [-49.07121411402852, -16.947367124654484],
+          [-56.10246411402852, -21.01873071079243]]]);
+
+var vesion_in = '5'
+var version_out = "5"
+var prefixo_in = 'MA_col6_p09_v'
+var prefixo_out = 'MA_col6_p10_v'
+
+var dirout = 'projects/mapbiomas-workspace/COLECAO6/classificacao-test/'
+var num_mudancas = 6
+var bioma = "MATAATLANTICA"
+
+var imc_carta2 = ee.Image(dirout+prefixo_in+vesion_in)
+
+////*************************************************************
+// Do not Change from these lines
+////*************************************************************
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis2 = {
+    'bands': 'classification_1990',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+Map.addLayer(imc_carta2, vis2, 'class_2018', false)
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+var visParMedian = {'bands':['median_swir1','median_nir','median_red'], 'gain':[0.08, 0.06,0.2],'gamma':0.5 };
+
+var anos = ['1985', '1986', '1987','1988', '1989', '1990','1991', '1992', '1993','1994', '1995', '1996','1997', '1998', '1999','2000', '2001', '2002','2003', '2004', '2005','2006', '2007', '2008','2009', '2010', '2011','2012', '2013', '2014','2015', '2016', '2017', '2018', '2019','2020']
+
+var colList = ee.List([])
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  var colList = colList.add(imc_carta2.select(['classification_'+ano],['classification']))
+}
+var imc_carta = ee.ImageCollection(colList)
+
+var img1 =  ee.Image(imc_carta.first());
+
+var image_moda = imc_carta.reduce(ee.Reducer.mode());
+Map.addLayer(image_moda, vis, "image_moda");
+
+
+// ******* incidence **********
+var imagefirst = img1.addBands(ee.Image(0)).rename(["classification", "incidence"]);
+
+var incidence = function(imgActual, imgPrevious){
+  
+  imgActual = ee.Image(imgActual);
+  imgPrevious = ee.Image(imgPrevious);
+  
+  var imgincidence = imgPrevious.select(["incidence"]);
+  
+  var classification0 = imgPrevious.select(["classification"]);
+  var classification1 = imgActual.select(["classification"]);
+  
+  
+  var change  = ee.Image(0);
+  change = change.where(classification0.neq(classification1), 1);
+  imgincidence = imgincidence.where(change.eq(1), imgincidence.add(1));
+  
+  return imgActual.addBands(imgincidence);
+  
+};
+
+var imc_carta4 = imc_carta.map(function(image) {
+    return image.rename('classification');
+});
+
+Map.addLayer(imc_carta4, vis, 'imc_carta4');
+
+var class4FT_corrigida = imc_carta2
+
+var image_incidence = ee.Image(imc_carta4.iterate(incidence, imagefirst)).select(["incidence"]);
+
+var palette_incidence = ["#C8C8C8","#FED266","#FBA713","#cb701b", "#cb701b", "#a95512", "#a95512", "#662000",  "#662000", "#cb181d"]
+
+Map.addLayer(image_incidence, {}, "image_incidence");
+
+
+var maskMudancas = image_incidence.gt(num_mudancas)
+maskMudancas = ee.Image(21).mask(maskMudancas)
+Map.addLayer(maskMudancas, {}, "maskMudancas");
+
+var maskIncid_anual3 = image_incidence.select('incidence').gt(6)
+maskIncid_anual3 = ee.Image(21).mask(maskIncid_anual3)
+
+var maskIncid_anual4 = image_incidence.select('incidence').gt(6)
+              .and((image_moda.eq(4)))
+maskIncid_anual4 = ee.Image(4).mask(maskIncid_anual4)
+
+class4FT_corrigida = class4FT_corrigida.blend(maskIncid_anual3)
+class4FT_corrigida = class4FT_corrigida.blend(maskIncid_anual4)
+
+Map.addLayer(class4FT_corrigida, vis2, 'class4FT corrigida');
+
+
+var vis = {
+    'bands': 'classification_1990',
+    'min': 0,
+    'max': 34,
+    'palette': palettes.get('classification2')
+};
+Map.addLayer(class4FT_corrigida, vis, 'corrigido class_1990', false)
+
+Export.image.toAsset({
+    'image': class4FT_corrigida,
+    'description': prefixo_out+version_out,
+    'assetId': dirout+prefixo_out+version_out,
+    'pyramidingPolicy': {
+        '.default': 'mode'
+    },
+    'region': geometry,
+    'scale': 30,
+    'maxPixels': 1e13
+});
