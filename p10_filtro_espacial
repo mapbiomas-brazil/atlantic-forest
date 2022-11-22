@@ -1,0 +1,106 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    ee.Geometry.Polygon(
+        [[[-56.05851880152852, -30.04613371617718],
+          [-49.20305005152852, -30.841736663987348],
+          [-41.46867505152852, -23.861579784474333],
+          [-34.17375317652852, -8.163484389272043],
+          [-34.26164380152852, -4.801825741437062],
+          [-35.66789380152852, -4.582835761516412],
+          [-49.07121411402852, -16.947367124654484],
+          [-56.10246411402852, -21.01873071079243]]]);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+var bioma = "MATAATLANTICA"
+
+var vesion_in = '51'
+var version_out = '52'
+var min_connect_pixel = 6
+var prefixo_in = 'MA_p10c_RF85a21_v'
+var prefixo_out = 'MA_p10d_RF85a21_v'
+var dirout = 'projects/mapbiomas-workspace/COLECAO7/pos-classificacao-ma/'
+
+//var img_agric = ee.Image('projects/mapbiomas-workspace/COLECAO7/classificacao-test/agric-p05_gap_v4')
+//print(img_agric)
+
+var class7 = ee.Image(dirout+prefixo_in+vesion_in)//.mask(bioma250mil_MA)
+print(class7)
+
+////*************************************************************
+// Do not Change from these lines
+////*************************************************************
+//var biomes = ee.Image('projects/mapbiomas-workspace/AUXILIAR/biomas-raster-41');
+//var bioma250mil_MA = biomes.mask(biomes.eq(2));
+//Map.addLayer(bioma250mil_MA,{'palette': 'ccffcc'}, 'bioma250mil_MA', false)
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var pal = palettes.get('classification2');
+var vis = {
+      bands: 'classification_2021',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+    };
+var vis2 = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+
+
+Map.addLayer(class7, vis, 'class7');
+
+
+var anos = ['1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021'];
+//var anos = ['1985']
+for (var i_ano=0;i_ano<anos.length; i_ano++){  
+  var ano = anos[i_ano]; 
+  
+  var moda = class7.select('classification_'+ano).focal_mode(3, 'square', 'pixels')
+  var conected = class7.select('classification_'+ano).connectedPixelCount(10,true).reproject('epsg:4326', null, 30);
+  moda = moda.mask(conected.lte(min_connect_pixel))
+  var class_out = class7.select('classification_'+ano).blend(moda)
+  
+  if (i_ano == 0){ var class_final = class_out }  
+  else {class_final = class_final.addBands(class_out); }
+}
+
+
+//print(class_final)
+Map.addLayer(class_final, vis, 'class_final');
+// Map.addLayer(class_out2, vis, 'class_out2');
+
+class_final = class_final
+.set('territory', 'BRAZIL')
+.set('biome', 'MATA ATÂNTICA')
+.set('source', 'arcplan')
+.set('version', version_out)
+.set('collection_id', 7.0)
+.set('description', 'Aplica Filtro Espacial')
+
+Export.image.toAsset({
+    "image": class_final.toInt8(),
+    'description': prefixo_out+version_out,
+    'assetId': dirout+prefixo_out+version_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});      
+
