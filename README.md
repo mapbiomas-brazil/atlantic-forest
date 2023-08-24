@@ -15,28 +15,28 @@ First, you need to copy these scripts to your Google Earth Engine (GEE) account.
 
 # Pre-processing
 
-Step01: build stable pixels from Colleciton 7 and save a new asset
+-build stable pixels from Colleciton 7 and save a new asset
 
-Step02:  export balanced training samples for each region
+-export balanced training samples for each region
 
-Step03:  export trained samples for each year
+-export trained samples for each year
 
 # Classification
 
-Step04: classify and export classification for each region
+-classify and export classification for each region
 
 # Post-processing
 
-Step05: merge classification of each region and apply Gap fill filter to remove NODATA 
+-merge classification of each region and apply Gap fill filter to remove NODATA 
 
-Step06: apply spatial filter to remove noise
+-apply spatial filter to remove noise
 
-Step07: apply frequency filter
+-apply frequency filter
 
-Step08: apply temporal filter
+-apply temporal filter
 
-Step09: apply incidents filter
+-apply incidents filter
 
-Step10: apply second spatial filter
+-apply second spatial filter
 
-Step11: add Herbaceous Sandbank Vegetation class
+-add Herbaceous Sandbank Vegetation class
