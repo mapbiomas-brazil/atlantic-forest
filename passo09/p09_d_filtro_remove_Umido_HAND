@@ -1,0 +1,93 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+var vesion_in = '13'
+var versao_out = '14';
+var descricao = 'Filtro de Áreas Úmidas baseada no HAND'
+var col = 8.0
+var prefixo_in = 'MA_col8_p09c_v'
+var prefixo_out = 'MA_col8_p09d_v'
+var dirout = 'projects/mapbiomas-workspace/COLECAO8/pos_classificacao-ma/';
+
+
+var classificacao =  ee.Image(dirout+prefixo_in+vesion_in)
+print(classificacao)
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};var vis2 = {
+    'bands': 'classification_2020',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+var vis_hand = {
+    'min': 0,
+    'max': 60,
+    'palette': 'blue,white,green,orange,red,brown'
+};
+var hand30_100 = ee.ImageCollection('users/gena/global-hand/hand-100').mosaic()
+var hand30_1000 =  ee.Image("projects/nexgenmap/MapBiomas2/ANCILARY/HAND_30_1000_South_America")
+
+Map.addLayer(hand30_100,vis_hand,'hand_1000',false)
+Map.addLayer(hand30_1000,vis_hand,'hand_1000',false)
+
+var hand30_100_7 =  hand30_100.lt(5)
+var hand30_1000_7 =  hand30_1000.lt(7)
+
+var hand_join = hand30_100_7.add(hand30_1000_7).remap([0,1,2],[0,1,1])
+
+Map.addLayer(hand30_100_7,{    'min': 0,    'max': 1,'palette': 'white, blue'} ,'hand_100- 7',false)
+Map.addLayer(hand30_1000_7,{    'min': 0,    'max': 1,'palette': 'white, blue'} ,'hand_1000- 7',false)
+
+Map.addLayer(classificacao, vis2, 'classificacao', true);
+
+var anos = ['1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022'];
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  var class_umido_ano = classificacao.select('classification_'+ano).mask(classificacao.select('classification_'+ano).eq(11))
+
+  var class_corrigido_ano = class_umido_ano.add(hand_join).remap([11,12],[21,11])
+
+  var class_corrigido_ano_11 = classificacao.select('classification_'+ano).blend(class_corrigido_ano)
+
+  if (i_ano == 0){ var class_corrigido = class_corrigido_ano_11 }  
+  else {class_corrigido = class_corrigido.addBands(class_corrigido_ano_11); }
+
+}
+
+Map.addLayer(class_corrigido, vis2, 'class_corrigido', true);
+
+class_corrigido = class_corrigido
+.set('territory', 'MATAATLANTICA')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao)
+
+Export.image.toAsset({
+    "image": class_corrigido.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});  
+

@@ -1,0 +1,116 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+var vesion_in = '8'
+var versao_out = '9';
+var descricao = 'Área de Transicao Minima'
+var col = 8.0
+var prefixo_in = 'MA_col8_p08a_v'
+var prefixo_out = 'MA_col8_p08b_v'
+var dirout = 'projects/mapbiomas-workspace/COLECAO8/pos_classificacao-ma/';
+
+var col7 =  ee.Image(dirout+prefixo_in+vesion_in)
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};var vis2 = {
+    'bands': 'classification_2021',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022];
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  var class_ano = col7.select('classification_'+ano)
+  var class_nivel0_ano = class_ano.remap([3,4,11,12,13,29, 9,19,21,22,24],
+                                         [1,1, 1, 1, 1, 1,10,10,10,10,10]).rename('classification_'+ano)
+
+  if (i_ano == 0){ var class_nivel0 = class_nivel0_ano }  
+  else {class_nivel0 = class_nivel0.addBands(class_nivel0_ano); }
+}
+
+var nivel0_2022 = class_nivel0.select('classification_2022')
+var nivel0_2021 = class_nivel0.select('classification_2021')
+
+// corrige desmatamentos pequenos no último ano
+var desmat = nivel0_2022.eq(10).and(nivel0_2021.eq(1))
+var conectedDesmat = desmat.selfMask().connectedPixelCount(20,true).reproject('epsg:4326', null, 30);
+var desmat1ha = conectedDesmat.lte(11)
+var ruido_desmat21 = col7.select('classification_2021').updateMask(desmat1ha)
+
+// corrige REGEN pequenos no último ano
+var regen = nivel0_2022.eq(1).and(nivel0_2021.eq(10))
+var conectedRegen = regen.selfMask().connectedPixelCount(25,true).reproject('epsg:4326', null, 30);
+var regen1ha = conectedRegen.lte(22)
+var ruido_regen21 = col7.select('classification_2021').updateMask(regen1ha)
+
+var nivel0_1985 = class_nivel0.select('classification_1985')
+var nivel0_1986 = class_nivel0.select('classification_1986')
+
+// corrige desmatamentos pequenos no primeiro ano
+var desmat = nivel0_1985.eq(1).and(nivel0_1986.eq(10))
+var conectedDesmat = desmat.selfMask().connectedPixelCount(30,true).reproject('epsg:4326', null, 30);
+var desmat1ha = conectedDesmat.lte(22)
+var ruido_desmat85 = col7.select('classification_1986').updateMask(desmat1ha)
+
+// corrige REGEN pequenos no primeiro ano
+var regen = nivel0_1985.eq(10).and(nivel0_1986.eq(1))
+var conectedregen = regen.selfMask().connectedPixelCount(30,true).reproject('epsg:4326', null, 30);
+var regen1ha = conectedregen.lte(11)
+var ruido_regen85 = col7.select('classification_1986').updateMask(regen1ha)
+
+
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  var class_ano = col7.select('classification_'+ano)
+
+  if (ano == 1985) {  var class_corr = class_ano.blend(ruido_desmat85).blend(ruido_regen85)}
+  else if (ano == 2022) {  
+    class_corr = class_ano.blend(ruido_desmat21).blend(ruido_regen21)  }
+  else {class_corr = class_ano}
+
+  if (i_ano == 0){ var class_final = class_corr}  
+  else {class_final = class_final.addBands(class_corr)}
+
+}
+
+Map.addLayer(col7, vis2, 'col7', true);
+Map.addLayer(class_final, vis2, 'class_final', true);
+
+
+class_final = class_final
+.set('territory', 'MATAATLANTICA')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao)
+
+Export.image.toAsset({
+    "image": class_final.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});      
+
