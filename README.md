@@ -11,11 +11,11 @@ We recommend that you read the Atlantic Forest Biome Appendix of the Algorithm T
 [Link to ATBD](https://mapbiomas-br-site.s3.amazonaws.com/Metodologia/MataAtlantica_Appendix_-_ATBD_Col7_v1-1.pdf)
 
 # How to use
-First, you need to copy these scripts (including those in p04 folder) to your Google Earth Engine (GEE) account.
+First, you need to copy these scripts to your Google Earth Engine (GEE) account.
 
 # Pre-processing
 
-Step01: build stable pixels from Colleciton 6 and save a new asset
+Step01: build stable pixels from Colleciton 7 and save a new asset
 
 Step02:  export balanced training samples for each region
 
