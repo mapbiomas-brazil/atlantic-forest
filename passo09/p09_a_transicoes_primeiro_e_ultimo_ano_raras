@@ -1,0 +1,130 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+var vesion_in = '10'
+var versao_out = '11';
+var descricao = 'Área de Transicao Minima'
+var col = 8.0
+var prefixo_in = 'MA_col8_p08c_v'
+var prefixo_out = 'MA_col8_p09a_v'
+var dirout = 'projects/mapbiomas-workspace/COLECAO8/pos_classificacao-ma/';
+
+
+var col7 =  ee.Image(dirout+prefixo_in+vesion_in)
+
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};var vis2 = {
+    'bands': 'classification_2022',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+
+var col7_1985 = col7.select('classification_1985')
+var col7_1986 = col7.select('classification_1986')
+var col7_2020 = col7.select('classification_2020')
+var col7_2021 = col7.select('classification_2021')
+var col7_2022 = col7.select('classification_2022')
+
+// corrige desmatamentos no 1o ano
+var desmat04_85 = col7_1985.eq(4).and(col7_1986.eq(21))
+var conecteddesmat04_85 = desmat04_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat04_85 = conecteddesmat04_85.lte(55)
+var ruido_desmatdesmat04_85 = col7.select('classification_1986').updateMask(desmat1hadesmat04_85)
+
+var desmat11_85 = col7_1985.eq(11).and(col7_1986.eq(21))
+var conecteddesmat11_85 = desmat11_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat11_85 = conecteddesmat11_85.lte(55)
+var ruido_desmatdesmat11_85 = col7.select('classification_1986').updateMask(desmat1hadesmat11_85)
+
+//2021
+var desmat04_21 = col7_2020.eq(21).and(col7_2021.eq(4))
+var conecteddesmat04_21 = desmat04_21.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat04_21 = conecteddesmat04_21.lte(55)
+var ruido_desmatdesmat04_21 = col7.select('classification_2020').updateMask(desmat1hadesmat04_21)
+
+var desmat11_21 = col7_2020.eq(21).and(col7_2021.eq(11))
+var conecteddesmat11_21 = desmat11_21.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat11_21 = conecteddesmat11_21.lte(55)
+var ruido_desmatdesmat11_21 = col7.select('classification_2020').updateMask(desmat1hadesmat11_21)
+
+var desmat12_21 = col7_2020.eq(21).and(col7_2021.eq(12))
+var conecteddesmat12_21 = desmat12_21.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat12_21 = conecteddesmat12_21.lte(55)
+var ruido_desmatdesmat12_21 = col7.select('classification_2020').updateMask(desmat1hadesmat12_21)
+
+//2022
+var desmat04_22 = col7_2021.eq(21).and(col7_2022.eq(4))
+var ruido_regen04_22 = col7.select('classification_2021').updateMask(desmat04_22)
+
+var desmat04_22 = col7_2021.eq(4).and(col7_2022.eq(21))
+var ruido_desmatdesmat04_22 = col7.select('classification_2021').updateMask(desmat04_22)
+
+var desmat11_22 = col7_2021.eq(21).and(col7_2022.eq(11))
+
+var ruido_desmatdesmat11_22 = col7.select('classification_2021').updateMask(desmat11_22)
+
+var desmat12_22 = col7_2021.eq(21).and(col7_2022.eq(12))
+var ruido_desmatdesmat12_22 = col7.select('classification_2021').updateMask(desmat12_22)
+
+
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,
+            1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,
+            2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,
+            2021,2022];
+
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  var class_ano = col7.select('classification_'+ano)
+
+  if (ano == 1985) {  var class_corr = class_ano.blend(ruido_desmatdesmat04_85).blend(ruido_desmatdesmat11_85)}
+  else if (ano == 2021) {  
+    class_corr = class_ano.blend(ruido_desmatdesmat04_21).blend(ruido_desmatdesmat11_21).blend(ruido_desmatdesmat12_21)  }
+  else if (ano == 2022) {  
+    class_corr = class_ano.blend(ruido_desmatdesmat04_22).blend(ruido_regen04_22).blend(ruido_desmatdesmat11_22).blend(ruido_desmatdesmat12_22)  }
+  else {class_corr = class_ano}
+
+  if (i_ano == 0){ var class_final = class_corr}  
+  else {class_final = class_final.addBands(class_corr)}
+
+}
+
+Map.addLayer(col7, vis2, 'col7', true);
+Map.addLayer(class_final, vis2, 'class_final', true);
+
+class_final = class_final
+.set('territory', 'MATAATLANTICA')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao)
+
+Export.image.toAsset({
+    "image": class_final.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});      
+

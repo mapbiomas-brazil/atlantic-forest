@@ -1,0 +1,189 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+var vesion_in = '16'
+var versao_out = '17';
+var descricao = 'remove floresta em silvicultura no final da serie'
+var col = 8.0
+var prefixo_in = 'MA_col8_p10a_v'
+var prefixo_out = 'MA_col8_p10b_v'
+var dirout = 'projects/mapbiomas-workspace/COLECAO8/pos_classificacao-ma/';
+
+var col7 =  ee.Image(dirout+prefixo_in+vesion_in)
+Map.addLayer(col7, {}, 'col7', false);
+
+
+ var mask21 = (     col7.select('classification_1985').eq(21)
+               .add(col7.select('classification_1986').eq(21))
+               .add(col7.select('classification_1987').eq(21))
+               .add(col7.select('classification_1988').eq(21))
+               .add(col7.select('classification_1989').eq(21))
+               .add(col7.select('classification_1990').eq(21))
+               .add(col7.select('classification_1991').eq(21))
+               .add(col7.select('classification_1992').eq(21))
+               .add(col7.select('classification_1993').eq(21))
+               .add(col7.select('classification_1994').eq(21))
+               .add(col7.select('classification_1995').eq(21))
+               .add(col7.select('classification_1996').eq(21))
+               .add(col7.select('classification_1997').eq(21))
+               .add(col7.select('classification_1998').eq(21))
+               .add(col7.select('classification_1999').eq(21))
+               .add(col7.select('classification_2000').eq(21)))
+               .gte(2)
+
+
+Map.addLayer(mask21, {}, 'mask21', false);
+
+
+var colS2 = ee.ImageCollection('projects/mapbiomas-workspace/COLECAO7-S2/integracao').filter(ee.Filter.eq('version', '0-5')).mosaic()
+
+var maskS2_9 = colS2.select('classification_2021').remap([9],[1])
+Map.addLayer(maskS2_9, {}, 'maskS2_9', false);
+
+var mask_21_S2_9 = mask21.add(maskS2_9)
+
+Map.addLayer(mask_21_S2_9, {}, 'mask_21_S2_9', false);
+
+var Palettes = require('users/mapbiomas/modules:Palettes.js');
+var palette = Palettes.get('classification7');
+var vis = {
+                'min': 0,
+                'max': 62,
+                'palette': palette,
+                'format': 'png'
+            }
+
+var vis2 = {
+                'bands': 'classification_2021',
+                'min': 0,
+                'max': 62,
+                'palette': palette,
+                'format': 'png'
+};
+Map.addLayer(colS2.select('classification_2021'), vis, 'class S2 2021', false)
+
+var biomes = ee.Image('projects/mapbiomas-workspace/AUXILIAR/biomas-raster-41');
+var bioma250mil_MA = biomes.mask(biomes.eq(2));
+Map.addLayer(bioma250mil_MA,{'palette': 'ccffcc'}, 'bioma250mil_MA', false)
+
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022];
+
+
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  var class_ano = col7.select('classification_'+ano)
+
+  var class_corr_s2 = class_ano.eq(3).add(mask_21_S2_9).remap([3],[21])
+    
+  var class_corr = class_ano.blend(class_corr_s2).rename('classification_'+ano)
+
+
+  if (i_ano == 0){ var image = class_corr}  
+  else {image = image.addBands(class_corr)}
+
+}
+
+Map.addLayer(image, {}, 'class_final', false);
+
+
+Map.addLayer(col7, vis2, 'col7', true);
+Map.addLayer(image, vis2, 'class_final', true);
+
+var years = [
+    1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992,
+    1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+    2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+    2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
+    2017, 2018, 2019, 2020, 2021, 2022
+    ];
+
+// get band names list 
+var bandNames = ee.List(
+    years.map(
+        function (year) {
+            return 'classification_' + String(year);
+        }
+    )
+);
+
+// generate a histogram dictionary of [bandNames, image.bandNames()]
+var bandsOccurrence = ee.Dictionary(
+    bandNames.cat(image.bandNames()).reduce(ee.Reducer.frequencyHistogram())
+);
+
+print(bandsOccurrence);
+
+// insert a masked band 
+var bandsDictionary = bandsOccurrence.map(
+    function (key, value) {
+        return ee.Image(
+            ee.Algorithms.If(
+                ee.Number(value).eq(2),
+                image.select([key]).byte(),
+                ee.Image().rename([key]).byte().updateMask(image.select(0))
+            )
+        );
+    }
+);
+
+// convert dictionary to image
+var imageAllBands = ee.Image(
+    bandNames.iterate(
+        function (band, image) {
+            return ee.Image(image).addBands(bandsDictionary.get(ee.String(band)));
+        },
+        ee.Image().select()
+    )
+);
+
+// generate image pixel years
+var imagePixelYear = ee.Image.constant(years)
+    .updateMask(imageAllBands)
+    .rename(bandNames);
+    
+    
+// add connected pixels bands
+var imageFilledConnected = image.addBands(
+    image
+        .connectedPixelCount(100, true)
+        .rename(bandNames.map(
+            function (band) {
+                return ee.String(band).cat('_conn')
+            }
+        ))
+);
+
+print(imageFilledConnected);
+
+
+imageFilledConnected = imageFilledConnected
+.set('territory', 'MATAATLANTICA')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao)
+
+Export.image.toAsset({
+    "image": imageFilledConnected.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});      

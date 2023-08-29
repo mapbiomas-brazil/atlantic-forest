@@ -29,14 +29,32 @@ Step04: classify and export classification for each region
 
 Step05: merge classification of each region and apply Gap fill filter to remove NODATA 
 
-Step06: apply spatial filter to remove noise
+Step06: spatial filter
 
-Step07: apply frequency filter
+Step07a: temporal filter-3year
 
-Step08: apply temporal filter
+Step07b: filter regeneration on rare classes
 
-Step09: apply incidents filter
+Step07c: stabilizes natural classes
 
-Step10: apply second spatial filter
+Step08a: temporal filter-4year
 
-Step11: add Herbaceous Sandbank Vegetation class
+Step08b: temporal filter on first and last year
+
+Step08c: temporal filter-5year
+
+Step09a: temporal filter on first and last year on rare classes
+
+Step09b: filter rare classes on the middle years
+
+Step09c: filter minimum areas of transitions
+
+Step09d: apply HAND filter on wetlands
+
+Step09e: remove forest regeneration in forest plantation from Sentinel classification
+
+Step10a: classify Sandbank Vegetation
+
+Step10b: remove forest regeneration on last years on agriculture
+
+Step10c: spatial filter
