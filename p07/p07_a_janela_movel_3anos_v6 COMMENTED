@@ -1,0 +1,119 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the input and output versions
+var vesion_in = '103';
+var versao_out = '120';
+
+// Define the description of the process
+var descricao = 'Janela Movel 3 anos';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p06b_v';
+var prefixo_out = 'MA_col9_p07a_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the classification image
+var class8 =  ee.Image(dirout+prefixo_in+vesion_in);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Define the years to process
+var anos = [
+   2022, 2021, 2020,2019,2018,2017,2016,2015,2014,2013,
+   2012,2011,2010,2009,2008,2007,2006,2005,2004,2003,2002,2001,
+   2000,1999,1998,1997,1996,1995,1994,
+   1993,1992,1991,1990,1989,1988,1987,1986
+            ];
+
+// Define a function to apply a 3-year moving window filter
+var window3years = function(imagem, classe){
+   // Initialize the final classification image
+   var class_final = imagem.select('classification_2023');
+   
+   // Loop through the years
+   for (var i_ano=0;i_ano<anos.length; i_ano++){
+     var ano = anos[i_ano];
+     // Select the classification for the current year
+     var class_ano = imagem.select('classification_'+ano);
+     // Create a mask for the 3-year window
+     var mask_3 = imagem.select('classification_'+ (ano + 1)).neq(classe)
+                .and(imagem.select('classification_'+ (ano)).eq(classe))
+                .and(imagem.select('classification_'+ (ano - 1)).neq(classe));
+     // Remap the classification for the previous year and apply the mask
+     mask_3 = imagem.select('classification_'+ (ano - 1)).remap([3,22,13,12,11, 4,29,19, 9,21],[3,22,13,12,11, 4,29,19, 9,21]).updateMask(mask_3);
+     // Blend the original classification with the masked classification
+     var class_corr = class_ano.blend(mask_3.rename('classification_'+ (ano)));
+     // Add the corrected classification to the final image
+     class_final = class_final.addBands(class_corr);
+   }
+   // Add the classification for 1985 to the final image
+   class_final = class_final.addBands(imagem.select('classification_1985'));
+   // Return the final classification image
+   return class_final;
+};
+
+// Apply the 3-year moving window filter for different classes
+var filtered = window3years(class8, 22);
+filtered = window3years(filtered, 50);
+filtered = window3years(filtered, 29);
+//filtered = window3years(filtered, 19);
+filtered = window3years(filtered, 3);
+filtered = window3years(filtered, 4);
+filtered = window3years(filtered, 21);
+filtered = window3years(filtered, 12);
+filtered = window3years(filtered, 11);
+//filtered = window3years(filtered,  9);
+
+// Add the original and filtered images to the map
+Map.addLayer(class8, {}, 'class8', false);
+Map.addLayer(filtered, {}, 'class_final', false);
+
+// Add the classifications for 2020 to the map
+Map.addLayer(class8.select('classification_2020'), vis, 'class8 2020', true);
+Map.addLayer(filtered.select('classification_2020'), vis, 'class_final 2020', true);
+
+// Set the metadata for the final classification image
+filtered = filtered
+.set('territory', 'MATAATLANTICA')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": filtered.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

@@ -1,0 +1,137 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the input and output versions
+var vesion_in = '125';
+var versao_out = '126';
+
+// Define the description of the process
+var descricao = 'Remove raras do meio';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p09a_v';
+var prefixo_out = 'MA_col9_p09b_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the classification image
+var class7 =  ee.Image(dirout+prefixo_in+vesion_in);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+var vis2 = {
+    'bands': 'classification_2000',
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Create masks for rare classes
+var mask04_neq = class7.select('classification_1985').neq(4)
+            .add(class7.select('classification_2023').neq(4)).remap([2],[1]);
+var mask11_neq = class7.select('classification_1985').neq(11)
+            .add(class7.select('classification_2023').neq(11)).remap([2],[1]);
+var mask12_neq = class7.select('classification_1985').neq(12)
+            .add(class7.select('classification_2023').neq(12)).remap([2],[1]);
+var mask13_neq = class7.select('classification_1985').neq(50)
+            .add(class7.select('classification_2023').neq(50)).remap([2],[1]);
+var mask29_neq = class7.select('classification_1985').neq(29)
+            .add(class7.select('classification_2023').neq(29)).remap([2],[1]);
+
+//Map.addLayer(mask04_neq, {}, 'mask04_neq', true);
+//Map.addLayer(mask29_neq, {}, 'mask29_neq', true);
+
+var mask04_eq = class7.select('classification_1985').eq(4)
+            .add(class7.select('classification_2023').eq(4)).remap([2],[1]);
+var mask11_eq = class7.select('classification_1985').eq(11)
+            .add(class7.select('classification_2023').eq(11)).remap([2],[1]);
+var mask12_eq = class7.select('classification_1985').eq(12)
+            .add(class7.select('classification_2023').eq(12)).remap([2],[1]);
+var mask13_eq = class7.select('classification_1985').eq(50)
+            .add(class7.select('classification_2023').eq(50)).remap([2],[1]);
+var mask29_eq = class7.select('classification_1985').eq(29)
+            .add(class7.select('classification_2023').eq(29)).remap([2],[1]);
+
+//Map.addLayer(mask04_eq, {}, 'mask04_eq', true);
+//Map.addLayer(mask29_eq, {}, 'mask29_eq', true);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+            
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class7.select('classification_'+ano);
+
+  // Apply corrections for rare classes
+  var ganho04 = class_ano.mask(mask04_neq).remap([4],[21]);
+  var ganho11 = class_ano.mask(mask11_neq).remap([11],[21]);
+  var ganho12 = class_ano.mask(mask12_neq).remap([12],[21]);
+  var ganho13 = class_ano.mask(mask13_neq).remap([50],[21]);
+  var ganho29 = class_ano.mask(mask29_neq).remap([29],[21]);
+
+  var perda04 = class_ano.mask(mask04_eq).remap([21],[4]);
+  var perda11 = class_ano.mask(mask11_eq).remap([21],[11]);
+  var perda12 = class_ano.mask(mask12_eq).remap([21],[12]);
+  var perda13 = class_ano.mask(mask13_eq).remap([21],[50]);
+  var perda29 = class_ano.mask(mask29_eq).remap([21],[29]);
+  
+  // Blend the original classification with the corrected classifications
+  class_ano = class_ano.blend(ganho04).blend(ganho11).blend(ganho12).blend(ganho13).blend(ganho29)
+                       .blend(perda04).blend(perda11).blend(perda12).blend(perda13).blend(perda29);
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido = class_ano; }  
+  else {class_corrigido = class_corrigido.addBands(class_ano); }
+}
+
+// Add the original and corrected classifications to the map
+Map.addLayer(class7, vis2, 'class_original', true);
+Map.addLayer(class_corrigido, vis2, 'class_corrigido', true);
+
+// Set the metadata for the final classification image
+class_corrigido = class_corrigido
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_corrigido.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

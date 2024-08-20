@@ -1,0 +1,193 @@
+// Define the visualization parameters for the NDVI image.
+var imageVisParam = {"opacity":1,"bands":["ndvi_amp"],"min":700,"max":10000,"palette":["137b01","03c40b","34ff04","f9ff00","ffa802","ff2b06","b41503"]}
+
+// Define the years for which to process the data.
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,
+            1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,
+            2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,
+            2021,2022,2023];
+
+// Define the visualization parameters for the median image.
+var visParMedian2 = {bands: ['swir1_median', 'nir_median', 'red_median'],gain: [0.08, 0.06, 0.2],gamma: 0.85}
+
+// Define the biome to process.
+var bioma = "MATAATLANTICA";
+
+// Define the asset path for the mosaics.
+var asset_mosaicos = 'projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2';
+
+// Loop through the years.
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  // Get the current year.
+  var ano = anos[i_ano];
+
+  // Define the years and assets for the current year. l5 = Landsat 5, l7 = Landsat 7, l8 = Landsat 8
+  if      (ano == 1985) {
+    var ano1 = 1985; var ano2 = 1986; var ano3 = 1987
+    var asset1 = 'l5'; var asset2 = 'l5'; var asset3 = 'l5'
+  }
+  else if (ano == 1986) {
+    var ano1 = 1986; var ano2 = 1985; var ano3 = 1987
+    var asset1 = 'l5'; var asset2 = 'l5'; var asset3 = 'l5'
+  }
+  else if (ano == 2000) {
+    var ano1 = 2000; var ano2 = 1999; var ano3 = 1998
+    var asset1 = 'l7'; var asset2 = 'l5'; var asset3 = 'l5'
+  }
+  else if (ano == 2001)   {
+    var ano1 = 2001; var ano2 = 2000; var ano3 = 1999
+    var asset1 = 'l7'; var asset2 = 'l7'; var asset3 = 'l5'
+  }
+  else if (ano == 2002) {
+    var ano1 = 2002; var ano2 = 2001; var ano3 = 2000
+    var asset1 = 'l7'; var asset2 = 'l7'; var asset3 = 'l7'
+  }
+  else if (ano == 2003) {
+    var ano1 = 2003; var ano2 = 2002; var ano3 = 2001
+     var asset1 = 'l5'; var asset2 = 'l7'; var asset3 = 'l7'
+  }
+  else if (ano == 2004) {
+    var ano1 = 2004; var ano2 = 2003; var ano3 = 2002
+     var asset1 = 'l5'; var asset2 = 'l5'; var asset3 = 'l7'
+  }
+  else if (ano == 2012) {
+    var ano1 = 2012; var ano2 = 2011; var ano3 = 2010
+    var asset1 = 'l7'; var asset2 = 'l5'; var asset3 = 'l5'
+  }
+  else if (ano == 2013) {
+    var ano1 = 2013; var ano2 = 2012; var ano3 = 2011
+    var asset1 = 'l8'; var asset2 = 'l7'; var asset3 = 'l5'
+  }
+  else if (ano == 2014) {
+    var ano1 = 2014; var ano2 = 2013; var ano3 = 2012
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l7'
+  }
+  else if (ano == 2015) {
+    var ano1 = 2015; var ano2 = 2014; var ano3 = 2013
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2016) {
+    var ano1 = 2016; var ano2 = 2015; var ano3 = 2014
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2017) {
+    var ano1 = 2017; var ano2 = 2016; var ano3 = 2015
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2018) {
+    var ano1 = 2018; var ano2 = 2017; var ano3 = 2016
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2019) {
+    var ano1 = 2019; var ano2 = 2018; var ano3 = 2017
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2020) {
+    var ano1 = 2020; var ano2 = 2019; var ano3 = 2018
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2021) {
+    var ano1 = 2021; var ano2 = 2020; var ano3 = 2019
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2022) {
+    var ano1 = 2022; var ano2 = 2021; var ano3 = 2020
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else if (ano == 2023) {
+    var ano1 = 2023; var ano2 = 2022; var ano3 = 2021
+    var asset1 = 'l8'; var asset2 = 'l8'; var asset3 = 'l8'
+  }
+  else {
+    var ano1 = ano; var ano2 = ( ano - 1); var ano3 = ( ano - 2)
+    var asset1 = 'l5'; var asset2 = 'l5'; var asset3 = 'l5'
+  }
+
+  // Load the mosaic for the current year.
+  var mosaicoTotal = ee.ImageCollection(asset_mosaicos_col6)
+                      .filterMetadata('biome', 'equals', bioma)
+                      .filterMetadata('year', 'equals', ano1)
+                      .filter(ee.Filter.eq('satellite', asset1))
+                      .mosaic()
+  
+  // Apply the Segmentation SNIC algorithm to the image.
+  var snic = ee.Algorithms.Image.Segmentation.SNIC({
+    image: mosaicoTotal.select(['blue_median','green_median','red_median','nir_median',
+    'swir1_median','ndfi_median','green_median_texture']),
+    size: 20,
+    compactness: 0.4,
+    connectivity: 8,
+  });
+  
+  // Load the mosaics for the previous years.
+  var mosaico1ano_antes = ee.ImageCollection(asset_mosaicos_col6)
+                    .filterMetadata('biome', 'equals', bioma)
+                    .filterMetadata('year', 'equals', ano2)
+                    .filter(ee.Filter.eq('satellite', asset2))
+                    .mosaic()
+  var mosaico2anos_antes = ee.ImageCollection(asset_mosaicos_col6)
+                    .filterMetadata('biome', 'equals', bioma)
+                    .filterMetadata('year', 'equals', ano3)
+                    .filter(ee.Filter.eq('satellite', asset3))
+                    .mosaic()
+
+  // Calculate the minimum and maximum NDFI values for the current and previous years.
+  var min3anos = ee.ImageCollection.fromImages([mosaicoTotal.select('ndfi_median_wet'),
+                                                mosaico1ano_antes.select('ndfi_median_wet'),
+                                                mosaico2anos_antes.select('ndfi_median_wet')]).min()
+  
+  var max3anos = ee.ImageCollection.fromImages([mosaicoTotal.select('ndfi_median_wet'),
+                                                mosaico1ano_antes.select('ndfi_median_wet'),
+                                                mosaico2anos_antes.select('ndfi_median_wet')]).max()
+  
+  // Calculate the NDFI amplitude for the current and previous years.
+  var amp3anos_ndfi = max3anos.subtract(min3anos).rename('amp_ndfi_3anos')
+
+  // Add the NDFI amplitude to the SNIC image.
+  snic = snic.addBands(amp3anos_ndfi)
+
+  // Calculate the longitude and latitude of each pixel.
+  var ll = ee.Image.pixelLonLat().clip(limite_mos);
+
+  var long = ll.select('longitude').add(34.8).multiply(-1).multiply(1000).toInt16()
+  var lati = ll.select('latitude').add(5).multiply(-1).multiply(1000).toInt16()
+
+  // Add the longitude and latitude to the SNIC image.
+  snic = snic.addBands(long.rename('longitude'))
+  snic = snic.addBands(lati.rename('latitude' ))
+
+  // Select the green texture and NDFI bands from the SNIC image.
+  var green_text = snic.select(["green_median_texture_mean","ndfi_median_mean"],
+                               ["clusters_green_text_"+ano1 , "clusters_ndfi_median_"+ano1])
+                               .toInt8()
+
+  // Create a mosaic of the SNIC images for all years.
+  if (i_ano == 0){ 
+    var mosaicoMA = snic.select(["clusters"],["clusters_"+ano1])
+                      .addBands(amp3anos_ndfi.rename("amp_ndfi_3anos_"+ano1 ))
+                      .addBands(green_text)
+                      .addBands(long.rename('longitude'))
+                      .addBands(lati.rename('latitude' ))
+                  }
+  else {
+    mosaicoMA = mosaicoMA.addBands(snic.select(["clusters"],["clusters_"+ano1])
+                      .addBands(amp3anos_ndfi.rename("amp_ndfi_3anos_"+ano1 ))
+                      .addBands(green_text)) 
+       }
+}
+
+// Print the mosaic.
+print(mosaicoMA)
+
+// Export the mosaic to an asset.
+Export.image.toAsset({
+  "image": mosaicoMA,
+  "description": 'mosaicoMA_clusters_1985_2023',
+  "assetId": 'projects/mapbiomas-workspace/MOSAICOS/mosaicos_MA_clusters_1985_2023',
+  "scale": 30,
+  "pyramidingPolicy": {
+      '.default': 'mode'
+  },
+  "maxPixels": 1e13,
+  "region": limite_mos
+});

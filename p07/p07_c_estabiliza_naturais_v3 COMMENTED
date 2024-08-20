@@ -1,0 +1,140 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+// Define the input and output versions
+var vesion_in = '121';
+var versao_out = '122';
+
+// Define the description of the process
+var descricao = 'estabiliza naturais moda';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p07b_v';
+var prefixo_out = 'MA_col9_p07c_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Import the palettes module
+var palette = require('users/mapbiomas/modules:Palettes.js').get('classification8');
+
+// Load the classification image
+var col8 =  ee.Image(dirout+prefixo_in+vesion_in);
+
+// Add the classification image to the map
+Map.addLayer(col8, {
+    'bands': ['classification_2021'],
+    'min': 0,
+    'max': 62,
+    'palette': palette,
+    'format': 'png'
+}, 'col8', false);
+
+// Define the years to process
+var anos = ['1985','1986','1987','1988','1989','1990',
+            '1991','1992','1993','1994','1995','1996','1997','1998','1999','2000',
+            '2001','2002','2003','2004','2005','2006','2007','2008','2009','2010',
+            '2011','2012','2013','2014','2015','2016','2017','2018','2019','2020',
+            '2021','2022','2023'];
+
+// Create a list of images for natural classes
+var countNaturais = anos.map(function (ano) {
+        // Remap the classification to include only natural classes
+        var image = col8.select('classification_'+ano).remap(
+                  [3, 4, 5, 49, 11,12,32,29,50,13],
+                  [3, 4, 3,  3, 11,12,32,29,50,11]);
+        // Convert the image to int8
+        return image.int8();
+    }
+);
+
+// Calculate the mode of the natural classes
+var moda_natural = ee.ImageCollection.fromImages(countNaturais).mode();
+
+// Add the mode image to the map
+Map.addLayer(moda_natural, {
+//    'bands': ['classification_' + yearVis.toString()],
+    'min': 0,
+    'max': 62,
+    'palette': palette,
+    'format': 'png'
+}, 'moda_natural', false);
+
+//  var amostraTotal = remove_reflo_3
+  
+//  var amostraTotalimg = amostraTotal.reduceToImage({properties: ['reference'],reducer: ee.Reducer.first()});
+//  amostraTotalimg = amostraTotalimg.select([0],['reference']);
+
+// Define the years to process
+var anos = ['1985','1986','1987','1988','1989','1990',
+            '1991','1992','1993','1994','1995','1996','1997','1998','1999','2000',
+            '2001','2002','2003','2004','2005','2006','2007','2008','2009','2010',
+            '2011','2012','2013','2014','2015','2016','2017','2018','2019','2020',
+            '2021','2022','2023'];
+            
+// Loop through the years and blend the classification with the mode image
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  // Create a mask for natural classes in the current year
+  var mask_nat_ano = col8.select('classification_'+ano).remap(
+                  [3, 4, 5, 49, 11,12,32,29,50,13],
+                  [1, 1, 1,  1,  1, 1, 1, 1, 1, 1]);
+  // Mask the mode image with the natural class mask
+  var moda_natural_ano = moda_natural.mask(mask_nat_ano);
+  // Blend the original classification with the masked mode image
+  var corrige_ano = col8.select('classification_'+ano).blend(moda_natural_ano);
+  
+//  var nova_class_reg3 = corrige_ano.clip(remove_reflo_3);
+//  nova_class_reg3 = nova_class_reg3.remap([3,4,9,11,12,13,21,22,29,33],[3,4,3,11,12,13,21,22,29,33]);
+//  var nova_class_remap = corrige_ano.blend(nova_class_reg3);
+                  
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var corrige = corrige_ano.rename('classification_'+ano); }  
+  else {corrige = corrige.addBands(corrige_ano.rename('classification_'+ano)); }
+  
+}
+
+print(corrige);
+
+// Add the corrected classification image to the map
+Map.addLayer(corrige, {
+    'bands': ['classification_2021'],
+    'min': 0,
+    'max': 62,
+    'palette': palette,
+    'format': 'png'
+}, 'col7 corrigido', false);
+
+// Set the metadata for the final classification image
+corrige = corrige
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    'image': corrige,
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    'pyramidingPolicy': {
+        '.default': 'mode'
+    },
+    'region': limite_MA,
+    'scale': 30,
+    'maxPixels': 1e13
+});

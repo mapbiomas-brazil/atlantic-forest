@@ -1,0 +1,182 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the description of the process
+var descricao = 'transição primeiro e ultimo ano';
+
+// Define the input and output versions
+var vesion_in = '102';
+var versao_out = '103';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p06a_v';
+var prefixo_out = 'MA_col9_p06b_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Define the biome
+var bioma = "MATAATLANTICA";
+
+// Load the collection 9 image
+var col9 =  ee.Image(dirout+prefixo_in+vesion_in);
+//Map.addLayer(col7, {}, 'col7', false);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+var vis2 = {
+    'bands': 'classification_2023',
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
+
+// Loop through the years
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = col9.select('classification_'+ano);
+
+  // Remap the classification to level 0
+  var class_nivel0_ano = class_ano.remap([3,4,11,12,13,29, 9,19,21,22,24],
+                                         [1,1, 1, 1, 1, 1,10,10,10,10,10]).rename('classification_'+ano);
+
+  // Combine the level 0 classifications for all years
+  if (i_ano == 0){ var class_nivel0 = class_nivel0_ano }  
+  else {class_nivel0 = class_nivel0.addBands(class_nivel0_ano); }
+}
+
+// Calculate the number of changes
+//var nChanges = class_nivel0.reduce(ee.Reducer.countRuns()).subtract(1);
+//Map.addLayer(nChanges, {'min': 0,'max': 6, 'palette': ["#ffffff","#fee0d2","#fcbba1",
+//            "#fb6a4a","#ef3b2c","#a50f15","#67000d"],'format': 'png'}, 'nChanges',false)
+
+// Select the level 0 classifications for the last three years
+var nivel0_2023 = class_nivel0.select('classification_2023');
+var nivel0_2022 = class_nivel0.select('classification_2022');
+var nivel0_2021 = class_nivel0.select('classification_2021');
+
+// Correct small deforestation in the last year
+var desmat = nivel0_2023.eq(10).and(nivel0_2022.eq(1)).and(nivel0_2021.eq(1));
+var conectedDesmat = desmat.selfMask().connectedPixelCount(20,true).reproject('epsg:4326', null, 30);
+var desmat1ha = conectedDesmat.lte(11);
+var ruido_desmat22 = col9.select('classification_2022').updateMask(desmat1ha);
+
+// Correct small regeneration in the last year
+var regen = nivel0_2023.eq(1).and(nivel0_2022.eq(10)).and(nivel0_2021.eq(10));
+var conectedRegen = regen.selfMask().connectedPixelCount(25,true).reproject('epsg:4326', null, 30);
+var regen1ha = conectedRegen.lte(22);
+var ruido_regen22 = col9.select('classification_2022').updateMask(regen1ha);
+
+// Correct loss of VÁRZEA in the last year
+var corrige_11_2023 = col9.select('classification_2021').eq(11)
+                          .and(col9.select('classification_2022').eq(11))
+                          .and(col9.select('classification_2023').eq(21));
+corrige_11_2023 = corrige_11_2023.remap([1],[11]);
+Map.addLayer(corrige_11_2023, vis, 'corrige_11_2023', true);
+
+// Select the level 0 classifications for the first three years
+var nivel0_1985 = class_nivel0.select('classification_1985');
+var nivel0_1986 = class_nivel0.select('classification_1986');
+var nivel0_1987 = class_nivel0.select('classification_1987');
+
+// Correct small deforestation in the first year
+var desmat = nivel0_1985.eq(1).and(nivel0_1986.eq(10)).and(nivel0_1987.eq(10));
+var conectedDesmat = desmat.selfMask().connectedPixelCount(30,true).reproject('epsg:4326', null, 30);
+var desmat1ha = conectedDesmat.lte(22);
+var ruido_desmat85 = col9.select('classification_1986').updateMask(desmat1ha);
+
+// Correct small regeneration in the first year
+var regen = nivel0_1985.eq(10).and(nivel0_1986.eq(1)).and(nivel0_1987.eq(1));
+var conectedregen = regen.selfMask().connectedPixelCount(30,true).reproject('epsg:4326', null, 30);
+var regen1ha = conectedregen.lte(11);
+var ruido_regen85 = col9.select('classification_1986').updateMask(regen1ha);
+
+// Correct 13 to 11 or 50
+  var c13para50img = c13_para_50.reduceToImage({properties: ['reference'],reducer: ee.Reducer.first()});
+  var c13para11img = c13_para_11.reduceToImage({properties: ['reference'],reducer: ee.Reducer.first()});
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = col9.select('classification_'+ano);
+  
+  // Apply corrections for 50 and 11
+  var corr_50 = class_ano.add(c13para50img).remap([113],[50]);
+  var corr_11 = class_ano.add(c13para11img).remap([113],[11]);
+
+  // Apply corrections for the first and last years
+  if (ano == 1985) {  var class_corr = class_ano.blend(ruido_desmat85).blend(ruido_regen85)
+                          .blend(corr_50).blend(corr_11);
+  }
+  else if (ano == 2023) {  
+    class_corr = class_ano.blend(ruido_desmat22).blend(ruido_regen22).blend(corr_50).blend(corr_11).blend(corrige_11_2023);  
+  }
+  else {class_corr = class_ano.blend(corr_50).blend(corr_11);}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_final = class_corr}  
+  else {class_final = class_final.addBands(class_corr);}
+
+}
+
+// Add the original and corrected classifications to the map
+Map.addLayer(col9, vis2, 'col9', true);
+Map.addLayer(class_final, vis2, 'class_final', true);
+
+//Map.addLayer(class_final.eq(col7).selfMask(), {
+//    'bands': ['classification_2021'],
+//    'min': 0,
+//    'max': 1,
+//    'palette': ['#ffffff', '#000000'],
+//    'format': 'png',
+//    'opacity': 0.8
+//}, 'changes');
+
+// Set the metadata for the final classification image
+class_final = class_final
+.set('territory', 'MATAATLANTICA')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_final.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

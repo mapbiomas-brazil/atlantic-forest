@@ -1,0 +1,197 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+
+// Define the description of the process
+var descricao = 'remove floresta em silvicultura no final da serie';
+
+// Define the input and output versions
+var vesion_in = '140';
+var versao_out = '141';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p09f_v';
+var prefixo_out = 'MA_col9_p10a_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Define the minimum number of pixels for a transition
+var min_pix = 6;
+
+// Load the classification image
+var col7 =  ee.Image(dirout+prefixo_in+vesion_in);
+Map.addLayer(col7, {}, 'col7', false);
+
+// Load agriculture and planted forest images
+//projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/agricultura
+//projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada
+
+//var plantada8 =  ee.ImageCollection('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada');
+//print(plantada8);
+
+//var silv_final = ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2013-1').remap([9],[1],0)
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2014-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2015-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2016-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2017-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2018-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2019-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2020-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2021-1').remap([9],[1],0))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/floresta-plantada/2022-1').remap([9],[1],0))
+//            .remap([10],[1],0);
+
+//var agri_final = ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/agricultura/2019-1').gt(1)
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/agricultura/2020-1').gt(1))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/agricultura/2021-1').gt(1))
+//            .add(ee.Image('projects/mapbiomas-workspace/TRANSVERSAIS/COLECAO8/agricultura/2022-1').gt(1))
+//            .remap([4],[1],1);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+var vis2 = {
+    'bands': 'classification_1991',
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Define the visualization parameters for HAND
+var vis_hand = {
+    'min': 0,
+    'max': 60,
+    'palette': 'blue,white,green,orange,red,brown'
+};
+
+// Load the HAND image
+var hand30_100 = ee.ImageCollection('users/gena/global-hand/hand-100').mosaic();
+
+// Add the HAND image to the map
+Map.addLayer(hand30_100,vis_hand,'hand_1000',false);
+
+// Create a mask for HAND values greater than or equal to 5
+var hand30_100_7 =  hand30_100.gte(5);//.selfMask();
+
+// Add the mask to the map
+// Map.addLayer(hand30_100,vis_hand,'hand_1000',false);
+Map.addLayer(hand30_100_7,{    'min': 0,    'max': 1,'palette': 'white, blue'} ,'hand_100- 7',false);
+
+// Load the collection 7.1 image
+var colS2 = ee.ImageCollection('projects/mapbiomas-workspace/COLECAO7-S2/integracao').filter(ee.Filter.eq('version', '0-5')).mosaic();
+print(colS2);
+
+// Create a mask for class 9 in collection Sentinel
+var maskS2_9 = colS2.select('classification_2021').remap([9],[1]);
+Map.addLayer(maskS2_9, {}, 'maskS2_9', false);
+
+// Combine the masks
+var mask_S2_9 = maskS2_9.add(hand30_100_7);
+Map.addLayer(mask_S2_9, {}, 'mask_S2_9', false);
+
+// Define the visualization parameters
+var Palettes = require('users/mapbiomas/modules:Palettes.js');
+var palette = Palettes.get('classification7');
+var vis = {
+                'min': 0,
+                'max': 62,
+                'palette': palette,
+                'format': 'png'
+            };
+
+var vis2 = {
+                'bands': 'classification_2021',
+                'min': 0,
+                'max': 62,
+                'palette': palette,
+                'format': 'png'
+};
+
+// Add the collection Sentinel classification to the map
+Map.addLayer(colS2.select('classification_2021'), vis, 'class S2 2021', false);
+
+// Load the biomes image
+var biomes = ee.Image('projects/mapbiomas-workspace/AUXILIAR/biomas-raster-41');
+var bioma250mil_MA = biomes.mask(biomes.eq(2));
+Map.addLayer(bioma250mil_MA,{'palette': 'ccffcc'}, 'bioma250mil_MA', false);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+
+//var anos = [1985];
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = col7.select('classification_'+ano);
+
+  // Apply corrections based on the year
+  if (ano == 1985) {var class_corr = class_ano;}
+  else {
+    // Create a mask for class 21
+    var class_ante = class_corr.remap([21],[1]);
+    // Blend the current classification with the mask and the combined mask
+    var class_corr_s2 = class_ano.remap([3,4],[1,1]).add(class_ante).add(mask_S2_9).remap([4],[21]);
+    var class_corr = class_ano.blend(class_corr_s2).rename('classification_'+ano);
+  }
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var image = class_corr;}  
+  else {image = image.addBands(class_corr);}
+
+}
+
+// Add the original and corrected classifications to the map
+Map.addLayer(image, {}, 'class_final', false);
+Map.addLayer(col7, vis2, 'col7', true);
+Map.addLayer(image, vis2, 'class_final', true);
+
+print(image);
+
+// Set the metadata for the final classification image
+image = image
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": image.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});      
+
+
