@@ -15,19 +15,21 @@ First, you need to copy these scripts (including those in p04 folder) to your Go
 
 # Pre-processing
 
-Step01: build stable pixels from Colleciton 6 and save a new asset
+Step01: build stable pixels from Colleciton 7 and save a new asset
 
-Step02:  export balanced training samples for each region
+Step02: export Landsat with calculated bands and indexes
 
-Step03:  export trained samples for each year
+Step03a:  export balanced training samples for each region
+Step03b:  export trained samples for each year
 
 # Classification
 
-Step04: classify and export classification for each region
+Step04: classify and export classification and probability for each region
 
 # Post-processing
 
-Step05: merge classification of each region and apply Gap fill filter to remove NODATA 
+Step05a: merge classification of each region and apply Gap fill filter to remove NODATA 
+Step0b: merge probability of each region and apply Gap fill filter to remove NODATA 
 
 Step06: spatial filter
 
@@ -39,22 +41,29 @@ Step07c: stabilizes natural classes
 
 Step08a: temporal filter-4year
 
-Step08b: temporal filter on first and last year
+Step08b: temporal filter-5year
 
-Step08c: temporal filter-5year
-
-Step09a: temporal filter on first and last year on rare classes
+Step09a: temporal filter on first and last year
 
 Step09b: filter rare classes on the middle years
 
-Step09c: filter minimum areas of transitions
+Step09c: reduce recovery os rare classes
 
 Step09d: apply HAND filter on wetlands
 
-Step09e: remove forest regeneration in forest plantation from Sentinel classification
+Step09e: filter minimum areas of transitions
 
-Step10a: classify Sandbank Vegetation
+Step09f: reduce forert in last year
 
-Step10b: remove forest regeneration on last years on agriculture
+Step09b: filter rare classes on the middle years
+
+Step10a: remove forest regeneration on last years on agriculture
+
+Step10b: classify Sandbank Vegetation
 
 Step10c: spatial filter
+
+Step10d: temporal filter-3year
+
+Step10e: add more savana in the border with Caatinga
+
