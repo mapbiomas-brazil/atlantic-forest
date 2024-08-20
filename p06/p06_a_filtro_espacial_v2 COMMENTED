@@ -1,0 +1,159 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+    
+
+// Define the biome
+var bioma = "MATAATLANTICA";
+
+// Define the input and output versions
+var vesion_in = '101';
+var versao_out = '102';
+
+// Define the description of the process
+var descricao = 'Filtro Espacial';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p05b_v';
+var prefixo_out = 'MA_col9_p06a_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Define the minimum number of connected pixels
+var min_connect_pixel = 6;
+var min_connect_pixel_agric = 6;
+
+// Define the image of agriculture
+//var img_agric = ee.Image('projects/mapbiomas-workspace/COLECAO8/classificacao-ma/agric-RF85a22_v90')
+//print(img_agric)
+
+// Load the classification image and its probability image
+var class4GAP = ee.Image(dirout+prefixo_in+vesion_in)//.mask(bioma250mil_MA)
+var class4GAPprob = ee.Image(dirout+'MA_col9_p05a_v2_prob')//.mask(bioma250mil_MA)
+print(class4GAP);
+print(class4GAPprob);
+
+////*************************************************************
+// Do not Change from these lines
+////*************************************************************
+
+// Load the biomes image
+//var biomes = ee.Image('projects/mapbiomas-workspace/AUXILIAR/biomas-raster-41');
+//var bioma250mil_MA = biomes.mask(biomes.eq(2));
+//Map.addLayer(bioma250mil_MA,{'palette': 'ccffcc'}, 'bioma250mil_MA', false)
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var pal = palettes.get('classification2');
+var vis = {
+      bands: 'classification_2023',
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+    };
+var vis2 = {
+    'min': 0,
+    'max': 45,
+    'palette': palettes.get('classification5')
+};
+
+// Add the agriculture image to the map
+//Map.addLayer(img_agric, vis, 'img_agric');
+
+// Add the classification image to the map
+Map.addLayer(class4GAP, vis, 'class4GAP');
+
+// Define the years to process
+var anos = ['1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995',
+            '1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006',
+            '2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017',
+            '2018','2019','2020','2021','2022','2023'];
+
+//var anos = ['2023']
+
+// Loop through the years
+for (var i_ano=0;i_ano<anos.length; i_ano++){  
+  var ano = anos[i_ano]; 
+  
+  // Apply a focal mode filter to the classification image
+  var moda = class4GAP.select('classification_'+ano).focal_mode(3, 'square', 'pixels')
+//  Map.addLayer(moda, vis, 'moda');
+
+  // Mask the image based on the minimum number of connected pixels
+  moda = moda.mask(class4GAP.select('classification_'+ano+'_conn').lte(min_connect_pixel))
+//  Map.addLayer(moda, vis, 'moda min conn');
+
+  // Blend the original classification image with the filtered image
+  var class_out = class4GAP.select('classification_'+ano).blend(moda)
+  
+  // Select the probability image for the current year
+  var class4GAPprob_ano = class4GAPprob.select('prob_'+ano).gt(60)
+
+  // Create a binary image for flooded areas
+  var flo_ano = class4GAP.select('classification_'+ano).remap([3],[1])
+
+  // Combine the flooded areas with the probability image
+  var flo_90_ano = flo_ano.add(class4GAPprob_ano).remap([2],[1])
+
+  // Calculate the number of connected pixels for flooded areas
+  var flo_90_ano_con = flo_90_ano.connectedPixelCount(10, true).reproject('epsg:4326', null, 30)
+//  print('flo_90_ano_con',flo_90_ano_con)
+//  Map.addLayer(flo_90_ano_con, {'palette': '#1eff05'}, 'flo_90_ano_con');
+  
+  // Create a binary image for flooded areas with at least 3 connected pixels
+  var flo_3pix = flo_90_ano_con.gte(3).remap([1],[3]).select(['remapped'],['classification_'+ano])
+//  Map.addLayer(flo_3pix, {'palette': '#1eff05'}, 'flo_3pix');
+ 
+  
+  // Blend the classification image with the flooded areas image
+  var class_out2 = class_out.blend(flo_3pix)
+  
+  // Combine the results for all years
+  if (i_ano == 0){ var class_outTotal = class_out2 }  
+  else {class_outTotal = class_outTotal.addBands(class_out2); }
+}
+
+// Define the final classification image
+var class_final = class_outTotal
+
+// Print the final classification image
+print(class_final)
+
+// Add the final classification image to the map
+Map.addLayer(class_final, vis, 'class_final');
+// Map.addLayer(class_out2, vis, 'class_out2');
+
+// Set the metadata for the final classification image
+class_final = class_final
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    'image': class_final,
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    'pyramidingPolicy': {
+        '.default': 'mode'
+    },
+    'region': limite_MA,
+    'scale': 30,
+    'maxPixels': 1e13
+});

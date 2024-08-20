@@ -1,0 +1,220 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the input and output versions
+var vesion_in = '124';
+var versao_out = '125';
+
+// Define the description of the process
+var descricao = 'transicao primeiro e ultimo raras';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p08b_v';
+var prefixo_out = 'MA_col9_p09a_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the classification image
+var col7 =  ee.Image(dirout+prefixo_in+vesion_in);
+//Map.addLayer(col7, {}, 'col7', false);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Select the classifications for specific years
+var col7_1985 = col7.select('classification_1985');
+var col7_1986 = col7.select('classification_1986');
+var col7_2021 = col7.select('classification_2021');
+var col7_2022 = col7.select('classification_2022');
+var col7_2023 = col7.select('classification_2023');
+
+// Add the selected classifications to the map
+Map.addLayer(col7_1985, vis, 'col7_1985', true);
+Map.addLayer(col7_1986, vis, 'col7_1986', true);
+Map.addLayer(col7_2022, vis, 'col7_2022', true);
+Map.addLayer(col7_2023, vis, 'col7_2023', true);
+
+// Correct deforestation in the first year
+var desmat03_85 = col7_1985.eq(3).and(col7_1986.eq(21));
+var conecteddesmat03_85 = desmat03_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat03_85 = conecteddesmat03_85.lte(55);
+var ruido_desmatdesmat03_85 = desmat1hadesmat03_85.remap([1],[21]);
+
+var desmat04_85 = col7_1985.eq(4).and(col7_1986.eq(21));
+var conecteddesmat04_85 = desmat04_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat04_85 = conecteddesmat04_85.lte(55);
+var ruido_desmatdesmat04_85 = desmat1hadesmat04_85.remap([1],[21]);
+
+Map.addLayer(ruido_desmatdesmat04_85, vis, 'ruido_desmatdesmat04_85', true);
+
+var desmat11_85 = col7_1985.eq(11).and(col7_1986.eq(21));
+var conecteddesmat11_85 = desmat11_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat11_85 = conecteddesmat11_85.lte(55);
+var ruido_desmatdesmat11_85 = desmat1hadesmat11_85.remap([1],[21]);
+
+//var desmat12_85 = col7_1985.eq(12).and(col7_1986.eq(21));
+//var conecteddesmat12_85 = desmat12_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+//var desmat1hadesmat12_85 = conecteddesmat12_85.lte(55);
+//var ruido_desmatdesmat12_85 = desmat1hadesmat12_85.remap([1],[21]);
+
+var desmat13_85 = col7_1985.eq(50).and(col7_1986.eq(21));
+var conecteddesmat13_85 = desmat13_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat13_85 = conecteddesmat13_85.lte(55);
+var ruido_desmatdesmat13_85 = desmat1hadesmat13_85.remap([1],[21]);
+
+var desmat29_85 = col7_1985.eq(29).and(col7_1986.eq(21));
+var conecteddesmat29_85 = desmat29_85.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat29_85 = conecteddesmat29_85.lte(55);
+var ruido_desmatdesmat29_85 = desmat1hadesmat29_85.remap([1],[21]);
+
+// Correct deforestation in the last year
+var desmat03_23 = col7_2022.eq(3).and(col7_2023.eq(21));
+var conecteddesmat03_23 = desmat03_23.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat03_23 = conecteddesmat03_23.lte(22);
+var ruido_desmatdesmat03_23 = desmat1hadesmat03_23.remap([1],[3]);
+
+var desmat04_23 = col7_2022.eq(4).and(col7_2023.eq(21));
+var conecteddesmat04_23 = desmat04_23.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat04_23 = conecteddesmat04_23.lte(55);
+var ruido_desmatdesmat04_23 = desmat1hadesmat04_23.remap([1],[4]);
+Map.addLayer(ruido_desmatdesmat04_23, vis, 'ruido_desmatdesmat04_23', true);
+
+var desmat11_23 = col7_2022.eq(11).and(col7_2023.eq(21));
+var conecteddesmat11_23 = desmat11_23.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat11_23 = conecteddesmat11_23.lte(55);
+var ruido_desmatdesmat11_23 = desmat1hadesmat11_23.remap([1],[11]);
+
+var desmat12_23 = col7_2022.eq(12).and(col7_2023.eq(21));
+var conecteddesmat12_23 = desmat12_23.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat12_23 = conecteddesmat12_23.lte(55);
+var ruido_desmatdesmat12_23 = desmat1hadesmat12_23.remap([1],[12]);
+
+var desmat13_23 = col7_2022.eq(50).and(col7_2023.eq(21));
+var conecteddesmat13_23 = desmat13_23.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat13_23 = conecteddesmat13_23.lte(55);
+var ruido_desmatdesmat13_23 = desmat1hadesmat13_23.remap([1],[50]);
+
+var desmat29_23 = col7_2022.eq(29).and(col7_2023.eq(21));
+var conecteddesmat29_23 = desmat29_23.selfMask().connectedPixelCount(56,true).reproject('epsg:4326', null, 30);
+var desmat1hadesmat29_23 = conecteddesmat29_23.lte(22);
+var ruido_desmatdesmat29_23 = desmat1hadesmat29_23.remap([1],[20]);
+
+// Correct regeneration in the last year
+var regen04_23 = col7_2022.eq(21).and(col7_2023.eq(4));
+var ruido_regen04_23 = regen04_23.remap([1],[21]);
+Map.addLayer(ruido_regen04_23, vis, 'ruido_regen04_23', true);
+
+var regen11_23 = col7_2022.eq(21).and(col7_2023.eq(11));
+var ruido_regen11_23 = regen11_23.remap([1],[21]);
+
+var regen12_23 = col7_2022.eq(21).and(col7_2023.eq(12));
+var ruido_regen12_23 = regen12_23.remap([1],[21]);
+
+var regen13_23 = col7_2022.eq(21).and(col7_2023.eq(50));
+var ruido_regen13_23 = regen13_23.remap([1],[21]);
+
+var regen29_23 = col7_2022.eq(21).and(col7_2023.eq(29));
+var ruido_regen29_23 = regen29_23.remap([1],[21]);
+
+// Correct regeneration in the first year
+var regen03_85 = col7_1985.eq(21).and(col7_1986.eq(3));
+var ruido_regen03_85 = regen03_85.remap([1],[3]);
+
+var regen11_85 = col7_1985.eq(21).and(col7_1986.eq(11));
+var ruido_regen11_85 = regen11_85.remap([1],[11]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,
+            1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,
+            2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,
+            2021,2022,2023];
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = col7.select('classification_'+ano);
+
+  // Apply corrections for the first and last years
+  if (ano == 1985) {  var class_corr = class_ano.blend(ruido_desmatdesmat03_85)
+                          .blend(ruido_desmatdesmat04_85).blend(ruido_desmatdesmat11_85)
+                          .blend(ruido_desmatdesmat13_85)//.blend(ruido_desmatdesmat12_85)
+                          .blend(ruido_desmatdesmat29_85)
+                          .blend(ruido_regen03_85).blend(ruido_regen11_85)
+    
+  }
+  else if (ano == 2023) {  
+    class_corr = class_ano.blend(ruido_desmatdesmat03_23)
+                          .blend(ruido_desmatdesmat04_23).blend(ruido_desmatdesmat11_23)
+                          .blend(ruido_desmatdesmat12_23).blend(ruido_desmatdesmat13_23)
+                          .blend(ruido_desmatdesmat29_23)
+                          .blend(ruido_regen04_23).blend(ruido_regen11_23)
+                          .blend(ruido_regen12_23).blend(ruido_regen13_23)
+                          .blend(ruido_regen29_23)
+    
+  }
+  // Otherwise, use the original classification
+  else {class_corr = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_final = class_corr;}  
+  else {class_final = class_final.addBands(class_corr);}
+
+}
+
+// Add the original and corrected classifications to the map
+Map.addLayer(col7.select('classification_2023'), vis, 'original', true);
+Map.addLayer(class_final.select('classification_2023'), vis, 'class_final', true);
+
+//Map.addLayer(class_final.eq(col7).selfMask(), {
+//    'bands': ['classification_2021'],
+//    'min': 0,
+//    'max': 1,
+//    'palette': ['#ffffff', '#000000'],
+//    'format': 'png',
+//    'opacity': 0.8
+//}, 'changes');
+
+// Set the metadata for the final classification image
+class_final = class_final
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_final.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

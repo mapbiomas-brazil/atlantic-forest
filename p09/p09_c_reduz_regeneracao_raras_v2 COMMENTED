@@ -1,0 +1,240 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the input and output versions
+var vesion_in = '126';
+var versao_out = '127';
+
+// Define the description of the process
+var descricao = 'Remove regen em raras';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p09b_v';
+var prefixo_out = 'MA_col9_p09c_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the classification image
+var col7 =  ee.Image(dirout+prefixo_in+vesion_in);
+//Map.addLayer(col7, {}, 'col7', false);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Select the classifications for specific years
+var col7_2010 = col7.select('classification_2010');
+var col7_2011 = col7.select('classification_2011');
+var col7_2012 = col7.select('classification_2012');
+var col7_2013 = col7.select('classification_2013');
+var col7_2014 = col7.select('classification_2014');
+var col7_2015 = col7.select('classification_2015');
+var col7_2016 = col7.select('classification_2016');
+var col7_2017 = col7.select('classification_2017');
+var col7_2018 = col7.select('classification_2018');
+var col7_2019 = col7.select('classification_2019');
+var col7_2020 = col7.select('classification_2020');
+var col7_2021 = col7.select('classification_2021');
+var col7_2022 = col7.select('classification_2022');
+var col7_2023 = col7.select('classification_2023');
+
+// Add the selected classifications to the map
+Map.addLayer(col7_2022, vis, 'col7_2022', true);
+Map.addLayer(col7_2023, vis, 'col7_2023', true);
+
+// Define correction rules for different classes
+// Várzea correction starts from 2010
+// Campo correction starts from 2015
+// Savana correction starts from 2020
+// Afloramento correction starts from 2020
+
+// Create masks for Várzea regeneration
+var ruido11_11 = (col7_2010.eq(21).and(col7_2011.eq(11))).remap([1],[21]);
+var ruido11_12 = (col7_2011.eq(21).and(col7_2012.eq(11))).remap([1],[21]);
+var ruido11_13 = (col7_2012.eq(21).and(col7_2013.eq(11))).remap([1],[21]);
+var ruido11_14 = (col7_2013.eq(21).and(col7_2014.eq(11))).remap([1],[21]);
+var ruido11_15 = (col7_2014.eq(21).and(col7_2015.eq(11))).remap([1],[21]);
+var ruido11_16 = (col7_2015.eq(21).and(col7_2016.eq(11))).remap([1],[21]);
+var ruido11_17 = (col7_2016.eq(21).and(col7_2017.eq(11))).remap([1],[21]);
+var ruido11_18 = (col7_2017.eq(21).and(col7_2018.eq(11))).remap([1],[21]);
+var ruido11_19 = (col7_2018.eq(21).and(col7_2019.eq(11))).remap([1],[21]);
+var ruido11_20 = (col7_2019.eq(21).and(col7_2020.eq(11))).remap([1],[21]);
+var ruido11_21 = (col7_2020.eq(21).and(col7_2021.eq(11))).remap([1],[21]);
+var ruido11_22 = (col7_2021.eq(21).and(col7_2022.eq(11))).remap([1],[21]);
+var ruido11_23 = (col7_2022.eq(21).and(col7_2023.eq(11))).remap([1],[21]);
+
+// Create masks for Campo regeneration
+var ruido12_15 = (col7_2014.eq(21).and(col7_2015.eq(12))).remap([1],[21]);
+var ruido12_16 = (col7_2015.eq(21).and(col7_2016.eq(12))).remap([1],[21]);
+var ruido12_17 = (col7_2016.eq(21).and(col7_2017.eq(12))).remap([1],[21]);
+var ruido12_18 = (col7_2017.eq(21).and(col7_2018.eq(12))).remap([1],[21]);
+var ruido12_19 = (col7_2018.eq(21).and(col7_2019.eq(12))).remap([1],[21]);
+var ruido12_20 = (col7_2019.eq(21).and(col7_2020.eq(12))).remap([1],[21]);
+var ruido12_21 = (col7_2020.eq(21).and(col7_2021.eq(12))).remap([1],[21]);
+var ruido12_22 = (col7_2021.eq(21).and(col7_2022.eq(12))).remap([1],[21]);
+var ruido12_23 = (col7_2022.eq(21).and(col7_2023.eq(12))).remap([1],[21]);
+
+// Create masks for Afloramento and Savana regeneration
+var ruido29_19 = (col7_2018.eq(21).and(col7_2019.eq(29))).remap([1],[21]);
+var ruido29_20 = (col7_2019.eq(21).and(col7_2020.eq(29))).remap([1],[21]);
+var ruido29_21 = (col7_2020.eq(21).and(col7_2021.eq(29))).remap([1],[21]);
+var ruido29_22 = (col7_2021.eq(21).and(col7_2022.eq(29))).remap([1],[21]);
+var ruido29_23 = (col7_2022.eq(21).and(col7_2023.eq(29))).remap([1],[21]);
+
+var ruido4_19 = (col7_2018.eq(21).and(col7_2019.eq(4))).remap([1],[21]);
+var ruido4_20 = (col7_2019.eq(21).and(col7_2020.eq(4))).remap([1],[21]);
+var ruido4_21 = (col7_2020.eq(21).and(col7_2021.eq(4))).remap([1],[21]);
+var ruido4_22 = (col7_2021.eq(21).and(col7_2022.eq(4))).remap([1],[21]);
+var ruido4_23 = (col7_2022.eq(21).and(col7_2023.eq(4))).remap([1],[21]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,
+            1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,
+            2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,
+            2021,2022,2023];
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = col7.select('classification_'+ano);
+
+  // Apply corrections based on the year
+  if (ano == 2011) {  
+    class_corr = class_ano
+    .blend(ruido11_11);
+  } else if (ano == 2012) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12);
+  } else if (ano == 2013) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13);
+  } else if (ano == 2014) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14);
+  } else if (ano == 2015) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16)
+    .blend(ruido12_15).blend(ruido12_16);
+  } else if (ano == 2016) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16)
+    .blend(ruido12_15).blend(ruido12_16);
+  } else if (ano == 2017) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17);
+  } else if (ano == 2018) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17).blend(ruido11_18)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17).blend(ruido12_18);
+  } else if (ano == 2019) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17).blend(ruido11_18).blend(ruido11_19)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17).blend(ruido12_18).blend(ruido12_19)
+    .blend(ruido29_19)
+    .blend(ruido4_19);
+  } else if (ano == 2020) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17).blend(ruido11_18).blend(ruido11_19)
+    .blend(ruido11_20)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17).blend(ruido12_18).blend(ruido12_19)
+    .blend(ruido12_20)
+    .blend(ruido29_19).blend(ruido29_20)
+    .blend(ruido4_19).blend(ruido4_20);
+  } else if (ano == 2021) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17).blend(ruido11_18).blend(ruido11_19)
+    .blend(ruido11_20).blend(ruido11_21)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17).blend(ruido12_18).blend(ruido12_19)
+    .blend(ruido12_20).blend(ruido12_21)
+    .blend(ruido29_19).blend(ruido29_20).blend(ruido29_21)
+    .blend(ruido4_19).blend(ruido4_20).blend(ruido4_21);
+  } else if (ano == 2022) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17).blend(ruido11_18).blend(ruido11_19)
+    .blend(ruido11_20).blend(ruido11_21).blend(ruido11_22)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17).blend(ruido12_18).blend(ruido12_19)
+    .blend(ruido12_20).blend(ruido12_21).blend(ruido12_22)
+    .blend(ruido29_19).blend(ruido29_20).blend(ruido29_21).blend(ruido29_22)
+    .blend(ruido4_19).blend(ruido4_20).blend(ruido4_21).blend(ruido4_22);
+  } else if (ano == 2023) {  
+    class_corr = class_ano
+    .blend(ruido11_11).blend(ruido11_12).blend(ruido11_13).blend(ruido11_14)
+    .blend(ruido11_15).blend(ruido11_16).blend(ruido11_17).blend(ruido11_18).blend(ruido11_19)
+    .blend(ruido11_20).blend(ruido11_21).blend(ruido11_22).blend(ruido11_23)
+    .blend(ruido12_15).blend(ruido12_16).blend(ruido12_17).blend(ruido12_18).blend(ruido12_19)
+    .blend(ruido12_20).blend(ruido12_21).blend(ruido12_22).blend(ruido12_23)
+    .blend(ruido29_19).blend(ruido29_20).blend(ruido29_21).blend(ruido29_22).blend(ruido29_23)
+    .blend(ruido4_19).blend(ruido4_20).blend(ruido4_21).blend(ruido4_22).blend(ruido4_23);
+  } else {var class_corr = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_final = class_corr;}  
+  else {class_final = class_final.addBands(class_corr);}
+
+}
+
+// Add the original and corrected classifications to the map
+Map.addLayer(col7.select('classification_2023'), vis, 'original', true);
+Map.addLayer(class_final.select('classification_2023'), vis, 'class_final', true);
+
+//Map.addLayer(class_final.eq(col7).selfMask(), {
+//    'bands': ['classification_2021'],
+//    'min': 0,
+//    'max': 1,
+//    'palette': ['#ffffff', '#000000'],
+//    'format': 'png',
+//    'opacity': 0.8
+//}, 'changes');
+
+// Set the metadata for the final classification image
+class_final = class_final
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_final.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

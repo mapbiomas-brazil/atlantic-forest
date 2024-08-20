@@ -1,0 +1,281 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the input and output versions
+var vesion_in = '120';
+var versao_out = '121';
+
+// Define the description of the process
+var descricao = 'Corrige recuperacao raras';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p07a_v';
+var prefixo_out = 'MA_col9_p07b_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the classification image
+var class7 =  ee.Image(dirout+prefixo_in+vesion_in);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+var vis2 = {
+    'bands': 'classification_1991',
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Correct savanna
+var mask4 = class7.select('classification_2021').eq(4)
+            .add(class7.select('classification_2022').eq(4))
+            .add(class7.select('classification_2023').eq(4))
+            .remap([3],[4]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+            
+// Loop through the years and apply the savanna correction
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class7.select('classification_'+ano);
+  // Create a copy of the classification with class 3 remapped to 3
+  var class_ano_3 = class7.select('classification_'+ano).remap([3],[3]);
+  
+  // Apply the savanna correction for years before 2021
+  if (ano < 2021) {var class_out = class_ano.blend(mask4).blend(class_ano_3);}
+  // Otherwise, use the original classification
+  else {var class_out = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido1 = class_out; }  
+  else {class_corrigido1 = class_corrigido1.addBands(class_out); }
+}
+
+// Correct restinga
+var mask13 = class7.select('classification_2021').eq(50)
+            .add(class7.select('classification_2022').eq(50))
+            .add(class7.select('classification_2023').eq(50))
+            .remap([3],[50]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+
+// Loop through the years and apply the restinga correction
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class_corrigido1.select('classification_'+ano);
+  
+  // Apply the restinga correction for years before 2021
+  if (ano < 2021) {var class_out = class_ano.blend(mask13);}
+  // Otherwise, use the original classification
+  else if (ano >= 2021) {var class_out = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido2 = class_out; }  
+  else {class_corrigido2 = class_corrigido2.addBands(class_out); }
+}
+
+// Correct Várzea at the beginning
+var mask11a = class7.select('classification_1985').eq(11)
+            .add(class7.select('classification_1986').neq(11))
+            .add(class7.select('classification_1987').neq(11))
+            .add(class7.select('classification_1988').neq(11))
+            .remap([4],[1]);
+
+// Select the classification for 1985
+var class_ano85  = class_corrigido2.select('classification_1985');
+// Apply the Várzea correction for 1985
+var corrige_varzea85 = class_ano85.mask(mask11a).remap([3,22,50,12,11, 4,29,21,33],
+                                                         [3,22,50,12,21, 4,29,21,33]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+            
+// Loop through the years and apply the Várzea correction
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class_corrigido2.select('classification_'+ano);
+  
+  // Apply the Várzea correction for 1985
+  if (ano == 1985) {var class_out = class_ano.blend(corrige_varzea85);}
+  // Otherwise, use the original classification
+  else {var class_out = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido3 = class_out; }  
+  else {class_corrigido3 = class_corrigido3.addBands(class_out); }
+}
+//Map.addLayer(class_corrigido3, vis2, 'class_corrigido3', true);
+
+// Correct Várzea at the beginning of 1986
+var mask11b = class_corrigido3.select('classification_1985').neq(11)
+            .add(class7.select('classification_1986').eq(11))
+            .add(class7.select('classification_1987').neq(11))
+            .add(class7.select('classification_1988').neq(11))
+            .remap([4],[1]);
+
+// Select the classification for 1986
+var class_ano86  = class_corrigido3.select('classification_1986');
+// Apply the Várzea correction for 1986
+var corrige_varzea86 = class_ano86.mask(mask11b).remap([3,22,50,12,11, 4,29,21,33],
+                                                         [3,22,50,12,21, 4,29,21,33]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+            
+// Loop through the years and apply the Várzea correction
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class_corrigido3.select('classification_'+ano);
+  
+  // Apply the Várzea correction for 1985 and 1986
+  if (ano == 1985) {var class_out = class_ano;}
+  else if (ano == 1986) {var class_out = class_ano.blend(corrige_varzea86);}
+  // Otherwise, use the original classification
+  else if (ano >= 1987) {var class_out = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido4 = class_out; }  
+  else {class_corrigido4 = class_corrigido4.addBands(class_out); }
+}
+
+//Map.addLayer(class_corrigido4, vis2, 'class_corrigido4', true);
+
+// Correct Várzea at the end
+var mask11_ultimo = class7.select('classification_2019').neq(11)
+                     .add(class7.select('classification_2020').neq(11))
+                     .add(class7.select('classification_2021').neq(11))
+                     .add(class7.select('classification_2022').neq(11))
+                     .add(class7.select('classification_2023').eq(11))
+            .remap([5],[1]);
+            
+// Select the classification for 2022
+var class_ano22  = class_corrigido4.select('classification_2022');
+// Apply the Várzea correction for 2023
+var corrige_varzea23 = class_ano22.mask(mask11_ultimo);
+  
+//Map.addLayer(mask11_ultimo, vis, 'mask11_ultimo', true);
+//Map.addLayer(corrige_varzea23, vis, 'corrige_varzea23', true);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+  
+// Loop through the years and apply the Várzea correction
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class_corrigido4.select('classification_'+ano);
+  
+  // Apply the Várzea correction for 2023
+  if (ano == 2023) {
+      var class_out = class_ano.blend(corrige_varzea23);
+  }
+  // Otherwise, use the original classification
+  else {
+    var class_out = class_ano;
+  }
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido5 = class_out; }  
+  else {class_corrigido5 = class_corrigido5.addBands(class_out); }
+}
+
+//Map.addLayer(class_corrigido4, vis2, 'class_corrigido4', true);
+
+// Correct outcrop
+var mask29 = class7.select('classification_2020').eq(29)
+            .add(class7.select('classification_2021').eq(29))
+            .add(class7.select('classification_2022').eq(29))
+            .add(class7.select('classification_2023').eq(29))
+            .remap([4],[29]);
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,
+            2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,
+            2015,2016,2017,2018,2019,2020,2021,2022,2023];
+
+// Loop through the years and apply the outcrop correction
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  
+  // Select the classification for the current year
+  var class_ano = class_corrigido5.select('classification_'+ano);
+  
+  // Apply the outcrop correction for years before 2020
+  if (ano < 2020) {var class_out = class_ano.blend(mask29);}
+  // Otherwise, use the original classification
+  else if (ano >= 2020) {var class_out = class_ano;}
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido6 = class_out; }  
+  else {class_corrigido6 = class_corrigido6.addBands(class_out); }
+}
+
+print(class_corrigido6);
+
+// Add the original and corrected images to the map
+Map.addLayer(class7, vis2, 'class_original', true);
+Map.addLayer(class_corrigido6, vis2, 'class_corrigido5', true);
+
+// Set the metadata for the final classification image
+class_corrigido5 = class_corrigido6
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_corrigido6.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

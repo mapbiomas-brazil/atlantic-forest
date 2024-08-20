@@ -1,0 +1,130 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the input and output versions
+var vesion_in = '127';
+var versao_out = '128';
+
+// Define the description of the process
+var descricao = 'Remove umido com HAND';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p09c_v';
+var prefixo_out = 'MA_col9_p09d_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the classification image
+var classificacao =  ee.Image(dirout+prefixo_in+vesion_in);
+print(classificacao);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+var vis2 = {
+    'bands': 'classification_2020',
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+// Define the visualization parameters for HAND
+var vis_hand = {
+    'min': 0,
+    'max': 60,
+    'palette': 'blue,white,green,orange,red,brown'
+};
+
+// Load the HAND images
+var hand30_100 = ee.ImageCollection('users/gena/global-hand/hand-100').mosaic();
+// var hand30_1000 =  ee.Image("users/gena/GlobalHAND/30m/hand-1000");
+var hand30_1000 =  ee.Image("projects/nexgenmap/MapBiomas2/ANCILARY/HAND_30_1000_South_America");
+
+// Add the HAND images to the map
+Map.addLayer(hand30_100,vis_hand,'hand_1000',false);
+Map.addLayer(hand30_1000,vis_hand,'hand_1000',false);
+
+// Create masks for HAND values less than 5 and 7
+var hand30_100_7 =  hand30_100.lt(5);//.selfMask();
+var hand30_1000_7 =  hand30_1000.lt(7);//.selfMask();
+
+// Combine the masks
+var hand_join = hand30_100_7.add(hand30_1000_7).remap([0,1,2],[0,1,1]);
+
+// Add the masks to the map
+// Map.addLayer(hand30_100,vis_hand,'hand_1000',false);
+Map.addLayer(hand30_100_7,{    'min': 0,    'max': 1,'palette': 'white, blue'} ,'hand_100- 7',false);
+Map.addLayer(hand30_1000_7,{    'min': 0,    'max': 1,'palette': 'white, blue'} ,'hand_1000- 7',false);
+
+// Add the classification image to the map
+Map.addLayer(classificacao, vis2, 'classificacao', true);
+
+// Define the years to process
+var anos = ['1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995','1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006','2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023'];
+// var anos = ['2020'];
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+  // Mask the classification image for the current year to include only class 11
+  var class_umido_ano = classificacao.select('classification_'+ano).mask(classificacao.select('classification_'+ano).eq(11));
+  // Map.addLayer(class_umido_ano, vis2, 'class_umido_ano', true);
+
+  // Apply the HAND mask and remap classes
+  var class_corrigido_ano = class_umido_ano.add(hand_join).remap([11,12],[21,11]);
+  // Map.addLayer(class_corrigido_ano, vis, 'class_corrigido_ano', true);
+  
+  // Blend the original classification with the corrected classification
+  var class_corrigido_ano_11 = classificacao.select('classification_'+ano).blend(class_corrigido_ano);
+  // Map.addLayer(class_corrigido_ano_11, vis2, 'class_corrigido_ano_11', true);
+  
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_corrigido = class_corrigido_ano_11; }  
+  else {class_corrigido = class_corrigido.addBands(class_corrigido_ano_11); }
+
+}
+
+// Add the corrected classification image to the map
+Map.addLayer(class_corrigido, vis2, 'class_corrigido', true);
+
+// Set the metadata for the final classification image
+class_corrigido = class_corrigido
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_corrigido.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

@@ -1,0 +1,252 @@
+// Define the region ID from 01 to 30
+var regiaoID = 'reg_01';
+
+// Flag to indicate if data evaulation is active
+var coleta = false;
+
+// Define the years for analysis
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,
+            1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,
+            2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,
+            2021,2022,2023];
+
+// If data evaluation is active, use a smaller set of years
+if (coleta) {
+  var anos = [1985,2022,2023]
+}
+
+// Define the number of trees for the Random Forest classifier
+var RFtrees = 100;
+
+// If data collection is active, use a smaller number of trees
+if (coleta) {var RFtrees = 10}
+
+// Define output version and other parameters
+var versao_out = '3';
+var col = 9.0
+var nome_out = 'RF85a23_v'
+var versao_pt = 'v1';
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/classificacao-ma/';
+
+// Import palettes for visualization
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+var vis = {'min': 0,'max': 62,'palette': palettes.get('classification8')};
+
+// Load regions and mosaics
+var regioesCollection = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/Mata_Atlantica_regions_col6_area2000');
+var mosaicos_MA_clusters = ee.Image('projects/mapbiomas-workspace/MOSAICOS/mosaicos_MA_clusters_1985_2023')
+var visParMedian2 = {bands: ['swir1_median', 'nir_median', 'red_median'],gain: [0.08, 0.06, 0.2],gamma: 0.85}
+var bioma = "MATAATLANTICA";
+
+// Filter the regions collection to get the desired region
+var limite = regioesCollection.filterMetadata('reg_id', "equals", regiaoID);
+
+// Add the region boundary to the map
+Map.addLayer(ee.Image(0).mask(0).paint(limite, 'AA0000', 2), {'palette':'000000','opacity': 0.6}, regiaoID, false);
+
+// Define a function to shuffle a feature collection
+var shuffle = function (collection, seed) {
+    // Add a random column to the collection
+    collection = collection.randomColumn('random', seed || 1)
+        // Sort the collection by the random column
+        .sort('random', true)
+        // Map over the collection to create a new ID
+        .map(function (feature) {
+                var rescaled = ee.Number(feature.get('random')).multiply(1000000000).round();
+                return feature.set('new_id', rescaled)});
+    // Get a list of the new IDs
+    var randomIdList = ee.List(collection.reduceColumns(ee.Reducer.toList(), ['new_id']).get('list'));
+    // Create a sequential list of IDs
+    var sequentialIdList = ee.List.sequence(1, collection.size());
+    // Remap the collection using the new and sequential IDs
+    var shuffled = collection.remap(randomIdList, sequentialIdList, 'new_id');
+    return shuffled;
+};
+
+// Define the asset path for mosaics
+var asset_mosaicos_col6 = 'projects/nexgenmap/MapBiomas2/LANDSAT/BRAZIL/mosaics-2';
+
+// Define the directory for samples
+var dirsamples = '';
+var seed = 1;
+
+// Loop through the years
+for (var i_ano=0;i_ano<anos.length; i_ano++){
+  var ano = anos[i_ano];
+
+  // Determine the sensor based on the year
+  if (ano == 2000)        {var sensor = 'l7';
+  } else if (ano == 2001) {var sensor = 'l7';
+  } else if (ano == 2002) {var sensor = 'l7';
+  } else if (ano == 2012) {var sensor = 'l7';
+  } else if (ano == 2013) {var sensor = 'l8';
+  } else if (ano == 2014) {var sensor = 'l8';
+  } else if (ano == 2015) {var sensor = 'l8';
+  } else if (ano == 2016) {var sensor = 'l8';
+  } else if (ano == 2017) {var sensor = 'l8';
+  } else if (ano == 2018) {var sensor = 'l8';
+  } else if (ano == 2019) {var sensor = 'l8';
+  } else if (ano == 2020) {var sensor = 'l8';
+  } else if (ano == 2021) {var sensor = 'l8';
+  } else if (ano == 2022) {var sensor = 'l8';
+  } else if (ano == 2023) {var sensor = 'l8';
+  } else                  {var sensor = 'l5'}    
+
+  // Load the training samples for the year
+  var BDamostras = ee.FeatureCollection(dirsamples + 'pontos_train_'+versao_pt+'_'+ano+'_seed_'+seed)
+                    .filterMetadata('reg_id', 'equals', regiaoID)
+
+  // Define the band names for the analysis
+  var bandNames = ee.List([
+               'gcvi_median_dry','gcvi_median_wet','red_median_wet',
+               'swir1_median_dry','gcvi_median','ndvi_median_wet',
+               'red_median','cai_median','savi_median_wet','swir1_median',
+               'gcvi_stdDev','green_min','swir1_median_wet',
+               'savi_median_dry','nir_median','swir2_median_wet',
+               'red_min','savi_median','nir_median_wet','evi2_median',
+               'red_median_dry','evi2_median_wet','swir2_median_dry',
+               'swir2_median','ndvi_median_dry','green_median_wet',
+               'green_median','wefi_median_wet','evi2_median_dry',
+               'ndwi_median_wet','ndwi_stdDev','ndwi_median',
+               'slope'])                    
+
+  // Create a mosaic for the year
+  var mosaicoTotal = ee.ImageCollection(asset_mosaicos_col6)
+                        .filterMetadata('biome', 'equals', bioma)
+                        .filterMetadata('year', 'equals', ano)
+                        .filter(ee.Filter.eq('satellite', sensor))
+                        .filterBounds(limite)
+                        .mosaic()
+                        .select(bandNames)
+                        
+      // Add additional bands from the clusters image
+      .addBands(mosaicos_MA_clusters.select(
+        ['clusters_'+ano, 'amp_ndfi_3anos_'+ano, 'clusters_green_text_'+ano, 
+        'clusters_ndfi_median_'+ano, 'longitude','latitude']))
+
+  // Update the band names list
+  bandNames = bandNames.add('clusters_'+ano)
+                       .add('amp_ndfi_3anos_'+ano)
+                       .add('clusters_green_text_'+ano)
+                       .add('clusters_ndfi_median_'+ano)
+                       .add('longitude')
+                       .add('latitude')
+  
+  // Add the mosaic to the map if data collection is active
+  if (coleta) {    
+    Map.addLayer(mosaicoTotal, visParMedian2, 'Img_Year_'+ano, false);
+  }
+
+  // Filter the training samples by reference class
+  var BDflo = BDamostras.filterMetadata("reference", "equals", 3)
+  var BDsav = BDamostras.filterMetadata("reference", "equals", 4)//.limit(100)
+  var BDreflo = BDamostras.filterMetadata("reference", "equals", 9)
+  var BDvarzea = BDamostras.filterMetadata("reference", "equals", 11)
+  var BDcampo = BDamostras.filterMetadata("reference", "equals", 12)
+  var BDOutroNFlo = BDamostras.filterMetadata("reference", "equals", 13)
+  var BDagro = BDamostras.filterMetadata("reference", "equals", 21)
+  //BDagro = shuffle(BDagro, 2).limit(3500)
+  var BDNaoVeg = BDamostras.filterMetadata("reference", "equals", 22)
+  var BDAflora = BDamostras.filterMetadata("reference", "equals", 29)
+  var BDagua = BDamostras.filterMetadata("reference", "equals", 33)
+
+  // Create a combined sample collection
+  var amostraTotal = campo.merge(agro).merge(aflora).merge(flo).merge(sav)
+  
+  // Convert the combined sample collection to an image
+  var amostraTotalimg = amostraTotal.reduceToImage({properties: ['reference'],reducer: ee.Reducer.first()})
+  amostraTotalimg = amostraTotalimg.select([0],['reference'])
+
+  // Sample the mosaic for each reference class
+  var training_flo = mosaicoTotal.select(bandNames).addBands(amostraTotalimg).sample({'numPixels': 800, 'region': flo.filterBounds(limite), 'scale': 30, 'seed': 1});
+  var training_afl = mosaicoTotal.select(bandNames).addBands(amostraTotalimg).sample({'numPixels': 1200, 'region': aflora.filterBounds(limite), 'scale': 30, 'seed': 1});
+  var training_sav = mosaicoTotal.select(bandNames).addBands(amostraTotalimg).sample({'numPixels': 500, 'region': sav.filterBounds(limite), 'scale': 30, 'seed': 1});
+  var training_afl = mosaicoTotal.select(bandNames).addBands(amostraTotalimg).sample({'numPixels': 500, 'region': aflora_r23.filterBounds(limite), 'scale': 30, 'seed': 1});
+  var training_cam = mosaicoTotal.select(bandNames).addBands(amostraTotalimg).sample({'numPixels': 1200, 'region': campo.filterBounds(limite), 'scale': 30, 'seed': 1});
+  var training_agr = mosaicoTotal.select(bandNames).addBands(amostraTotalimg).sample({'numPixels': 200, 'region': agro.filterBounds(limite), 'scale': 30, 'seed': 1});
+
+
+  // Combine all training samples
+  var training = BDflo.merge(BDreflo).merge(BDcampo)//.merge(BDsav).merge(BDOutroNFlo).merge(BDAflora)
+                      .merge(BDagro).merge(BDNaoVeg).merge(BDagua)
+                      //complementares
+                      .merge(training_cam).merge(training_agr).merge(training_afl).merge(training_sav).merge(training_flo)
+
+  // Train the Random Forest classifier
+  var classifier = ee.Classifier.smileRandomForest({numberOfTrees: RFtrees, variablesPerSplit:1}).train(training, 'reference', bandNames);
+
+  // Classify the mosaic
+  var classified = mosaicoTotal.classify(classifier).mask(mosaicoTotal.select('green_median'));
+  classified = classified.select(['classification'],['classification_'+ano]).clip(limite.geometry()).toInt8()
+
+  // Create a classifier for probability output
+  var classifier_prob = classifier.setOutputMode('MULTIPROBABILITY')
+
+  // Classify the mosaic with probability output
+  var classified_prob = mosaicoTotal.classify(classifier_prob)
+
+  // Get the maximum probability for each pixel
+  var max_prob = classified_prob.arrayReduce(ee.Reducer.max(), [0])
+
+  // Flatten the probability array and multiply by 100
+  var img_max_prop = max_prob.arrayFlatten([['prob_'+ano]]).multiply(100)
+
+  // Add the classified image to the map if data collection is active
+  if (coleta) {  Map.addLayer(classified, vis, 'RF'+ano+"_"+regiaoID, false);}
+
+  // Combine the classified images for all years
+  if (i_ano == 0){ 
+    var classified85a23 = classified
+    var classified85a23_prob = img_max_prop 
+  }
+  else {
+    classified85a23 = classified85a23.addBands(classified);
+    classified85a23_prob = classified85a23_prob.addBands(img_max_prop) 
+  }
+  
+}
+
+// Set metadata for the classified image
+classified85a23 = classified85a23
+.set('territory', 'BRAZIL')
+.set('biome', 'MATA ATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('collection_id', col)
+
+// Export the classified image to an asset
+Export.image.toAsset({
+  "image": classified85a23.toInt8(),
+  "description": regiaoID+'-'+nome_out+versao_out+'_seed_'+seed,
+  "assetId": dirout + regiaoID+'-'+nome_out+versao_out+'_seed_'+seed,
+  "scale": 30,
+  "pyramidingPolicy": {
+      '.default': 'mode'
+  },
+  "maxPixels": 1e13,
+  "region": limite
+});    
+
+// Add the probability image to the map
+Map.addLayer(classified85a23_prob, {"opacity":1,"bands":["prob_2022"],"min":17.397846221923828,"max":96.64131927490234,"palette":["ff1203","fffd03","39ff03","018610","02521a"]}, 'Probabilidade', false)
+
+// Set metadata for the probability image
+classified85a23_prob = classified85a23_prob
+.set('territory', 'BRAZIL')
+.set('biome', 'MATA ATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('collection_id', col)
+
+// Export the probability image to an asset
+Export.image.toAsset({
+  "image": classified85a23_prob.toInt8(),
+  "description": regiaoID+'-'+nome_out+versao_out+'_prob',
+  "assetId": dirout + regiaoID+'-'+nome_out+versao_out+'_prob',
+  "scale": 30,
+  "pyramidingPolicy": {
+      '.default': 'mode'
+  },
+  "maxPixels": 1e13,
+  "region": limite
+});

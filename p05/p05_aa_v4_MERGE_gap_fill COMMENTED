@@ -1,0 +1,251 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+          
+// Set the connected pixel count flag
+var VeightConnected = true;
+
+// Define the output prefix
+var prefixo_out = 'MA_col9_p05a_v';
+
+// Define the output version
+var versao_out = '100';
+
+// Define the description of the process
+var descricao = 'Merge e Gap Fill';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the directories for collection 9 and output
+var dircol9 = 'projects/mapbiomas-workspace/COLECAO9/classificacao-ma/';
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Define the year and biome
+var ano = 2023;
+var bioma = "MATA ATÂNTICA";
+
+////*************************************************************
+// Do not Change from these lines
+////*************************************************************
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Define the palettes for visualization
+var vis = {'min': 0,'max': 62,'palette': palettes.get('classification8')};
+var vis2 = {'bands':'classification_'+ano , 'min': 0,'max': 62,'palette': palettes.get('classification8')};
+
+// Initialize an empty list for images
+var img_col = ee.List([]);
+
+// Define the list of regions and their last versions
+var lista_regs = [
+                  ['reg_09','2'],
+                  ['reg_01','3'],['reg_02','3'],['reg_03','3'],
+                  ['reg_06','3'],['reg_07','2'],['reg_08','2'],['reg_10','2'],
+                  ['reg_11','3'],['reg_12','2'],['reg_13','2'],['reg_14','3'],['reg_15','2'],
+                  ['reg_16','2'],['reg_17','2'],['reg_18','2'],['reg_19','2'],['reg_20','3'],
+                  ['reg_27','4'],
+                  ['reg_21','2'],
+                  ['reg_22','3'],['reg_23','3'],
+                  ['reg_25','2'],
+                  ['reg_29','2'],
+                  ['reg_26','2'],['reg_28','2'],['reg_30','3'],
+                  ['reg_04','2'],['reg_05','2'],['reg_24','3']
+                 ];
+
+// Define the seed and input version
+var seed = 1;
+var versao_in = '1';
+
+// Loop through the regions and add their images to the list
+for (var i_reg=0;i_reg<lista_regs.length; i_reg++){
+  var regiaoList = lista_regs[i_reg];
+  var regiaoID = regiaoList[0];
+  var reg_vers = regiaoList[1];
+  
+//  print(regiaoID);
+//  print(reg_vers);
+  //if (regiaoID == 'reg_01') {var versao_in = '20'}
+  //else {var versao_in = '1'}
+
+  // Load the image for the current region
+  var img = ee.Image(dircol9 + regiaoID+'-RF85a23_v'+reg_vers+'_seed_'+seed);
+  // Add the image to the list
+  img_col = img_col.add(img.selfMask());
+
+//reg_30-RF85a23_v1_seed_1
+}
+print(img_col);
+
+// Create an image collection from the list of images
+var img_moda = ee.ImageCollection.fromImages(img_col).mosaic();
+
+            
+// Mask the image to remove zero values
+var image = img_moda.mask(img_moda.neq(0));
+print(image);
+
+// Define the years to process
+var years = [
+    1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992,
+    1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+    2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+    2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
+    2017, 2018, 2019, 2020, 2021, 2022, 2023
+    ];
+
+/**
+ * User defined functions
+ */
+// Define a function to apply gap fill from t0 to tn and tn to t0
+var applyGapFill = function (image) {
+
+    // apply the gap fill form t0 until tn
+    var imageFilledt0tn = bandNames.slice(1)
+        .iterate(
+            function (bandName, previousImage) {
+
+                // Select the current band
+                var currentImage = image.select(ee.String(bandName));
+
+                // Cast the previous image to an ee.Image
+                previousImage = ee.Image(previousImage);
+
+                // Unmask the current image using the previous image
+                currentImage = currentImage.unmask(
+                    previousImage.select([0]));
+
+                // Add the current image to the previous image
+                return currentImage.addBands(previousImage);
+
+            }, ee.Image(imageAllBands.select([bandNames.get(0)]))
+        );
+
+    // Cast the image to an ee.Image
+    imageFilledt0tn = ee.Image(imageFilledt0tn);
+
+    // apply the gap fill form tn until t0
+    // Reverse the band names list
+    var bandNamesReversed = bandNames.reverse();
+
+    // Iterate through the reversed band names list
+    var imageFilledtnt0 = bandNamesReversed.slice(1)
+        .iterate(
+            function (bandName, previousImage) {
+
+                // Select the current band from the image filled from t0 to tn
+                var currentImage = imageFilledt0tn.select(ee.String(bandName));
+
+                // Cast the previous image to an ee.Image
+                previousImage = ee.Image(previousImage);
+
+                // Unmask the current image using the last band of the previous image
+                currentImage = currentImage.unmask(
+                    previousImage.select(previousImage.bandNames().length().subtract(1)));
+
+                // Add the current image to the previous image
+                return previousImage.addBands(currentImage);
+
+            }, ee.Image(imageFilledt0tn.select([bandNamesReversed.get(0)]))
+        );
+
+
+    // Cast the image to an ee.Image and select the original band names
+    imageFilledtnt0 = ee.Image(imageFilledtnt0).select(bandNames);
+
+    // Return the image filled from tn to t0
+    return imageFilledtnt0;
+};
+
+// Create a list of band names
+var bandNames = ee.List(
+    years.map(
+        function (year) {
+            return 'classification_' + String(year);
+        }
+    )
+);
+
+// Generate a histogram dictionary of band names and image band names
+var bandsOccurrence = ee.Dictionary(
+    bandNames.cat(image.bandNames()).reduce(ee.Reducer.frequencyHistogram())
+);
+
+print(bandsOccurrence);
+
+// Create a dictionary of bands with masked bands
+var bandsDictionary = bandsOccurrence.map(
+    function (key, value) {
+        return ee.Image(
+            ee.Algorithms.If(
+                ee.Number(value).eq(2),
+                // If the band occurs twice, select the band from the original image
+                image.select([key]).byte(),
+                // If the band occurs once, create a masked band
+                ee.Image().rename([key]).byte().updateMask(image.select(0))
+            )
+        );
+    }
+);
+
+// Convert the dictionary to an image
+var imageAllBands = ee.Image(
+    bandNames.iterate(
+        function (band, image) {
+            // Add the band from the dictionary to the image
+            return ee.Image(image).addBands(bandsDictionary.get(ee.String(band)));
+        },
+        // Initialize the image with an empty selection
+        ee.Image().select()
+    )
+);
+
+// Generate an image of pixel years
+var imagePixelYear = ee.Image.constant(years)
+    .updateMask(imageAllBands)
+    .rename(bandNames);
+
+// Apply the gap fill function
+var imageFilledtnt0 = applyGapFill(imageAllBands);
+var imageFilledYear = applyGapFill(imagePixelYear);
+
+
+// Add the original and filtered images to the map
+Map.addLayer(image, vis2, 'original',false);
+Map.addLayer(imageFilledtnt0, vis2, 'filtered'); //.mask(bioma250mil_MA)
+
+print(imageFilledtnt0);
+
+// Set the metadata for the final classification image
+var classified85a23 = imageFilledtnt0
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+//print(classified85a21);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+  "image": classified85a23.toInt8(),
+  "description": prefixo_out + versao_out,
+  "assetId": dirout + prefixo_out + versao_out,
+  "scale": 30,
+  "pyramidingPolicy": {
+      '.default': 'mode'
+  },
+  "maxPixels": 1e13,
+  "region": limite_MA
+});    

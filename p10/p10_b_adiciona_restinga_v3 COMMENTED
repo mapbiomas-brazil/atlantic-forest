@@ -1,0 +1,239 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+// Define the description of the process
+var descricao = 'Adiciona restinga e faz correcoes pontuais';
+
+// Define the input and output versions
+var vesion_in = '141';
+var versao_out = '142';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p10a_v';
+var prefixo_out = 'MA_col9_p10b_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Load the biomes image
+var biomes = ee.Image('projects/mapbiomas-workspace/AUXILIAR/biomas-raster-41');
+var bioma250mil_MA = biomes.mask(biomes.eq(2));
+Map.addLayer(bioma250mil_MA,{'palette': 'ccffcc'}, 'bioma250mil_MA', false);
+
+// Import the palettes module
+var palettes = require('users/mapbiomas/modules:Palettes.js');
+
+// Load the classification image
+var class7 = ee.Image(dirout+prefixo_in+vesion_in);//.mask(bioma250mil_MA);
+//print(class6);
+//var col7_integracao = ee.ImageCollection('projects/mapbiomas-workspace/COLECAO7/integracao').filterBounds(geometry).mosaic().clip(geometry);
+
+// Define the palettes for visualization
+var vis = {
+      bands: 'classification_2020',
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+    };
+var vis2 = {
+    'min': 0,
+    'max': 62,
+    'palette': palettes.get('classification8')
+};
+
+//Map.addLayer(col6_beta, vis, 'col6_beta');
+
+// Add the classification image to the map
+Map.addLayer(class7, vis, 'class7');
+
+// Load the terrain image
+var terrain = ee.Image("JAXA/ALOS/AW3D30_V1_1").select("AVE");
+//Map.addLayer(terrain,{},'relevo',false);
+
+// Calculate the slope
+var slope = ee.Terrain.slope(terrain);
+//Map.addLayer(slope,{},'slope',false);
+
+// Create a mask for areas with elevation less than 25
+var plan = terrain.lt(25).clip(restinga).selfMask();
+Map.addLayer(plan,{'palette': 'yellow'},'plan',false);
+
+//var plan2 = terrain.lt(50).and(slope.lt(6)).selfMask();
+//Map.addLayer(plan2,{'palette': 'red'});
+
+//var restinga_abor = class7.select('classification_1985').mask(class7.select('classification_1985').eq(3).and(plan.eq(1)))//
+//Map.addLayer(restinga_abor,{'palette': '#00ff44'},'restinga arbórea');
+
+// Load the coastal soil feature collection
+var solo_costeiro = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/RESTINGA/SolosIBGE_SCostMarinhoBR');
+// Set the reference property to 1 for each feature
+solo_costeiro = solo_costeiro.map(function altera(feat) {return feat.set('reference',1)});
+Map.addLayer(solo_costeiro);
+
+//var vetor_correcoes = solo_costeiro.merge(remove_agricultura).merge(converter12para21).merge(converter9para3);
+// Create a feature collection for corrections
+var vetor_correcoes = solo_costeiro.merge(converte12para29);
+
+// Convert the feature collection to an image
+var imagem_correcoes = vetor_correcoes.reduceToImage({properties: ['reference'],reducer: ee.Reducer.first()});
+//Map.addLayer(costa);
+
+// Define the years to process
+var anos = ['1985','1986','1987','1988','1989','1990','1991','1992','1993','1994','1995',
+            '1996','1997','1998','1999','2000','2001','2002','2003','2004','2005','2006',
+            '2007','2008','2009','2010','2011','2012','2013','2014','2015','2016','2017',
+            '2018','2019','2020','2021','2022','2023'];
+//var anos = ['2020'];
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){  
+  var ano = anos[i_ano]; 
+  
+  // Select the classification for the current year
+  var col7_ano = class7.select('classification_'+ano).remap(
+     [3,4,9,11,12,50,19,21,22,29,33,49],
+     [3,4,9,11,12,50,41,21,25,29,33,49]).rename('classification_'+ano);
+//  var mask_sav = col7_integracao.select('classification_'+ano).eq(21).clip(converter21para4).remap([1],[4]).rename('classification_'+ano);
+
+  // Create masks for restinga
+  var restinga_abor = col7_ano.mask(col7_ano.eq(3).and(plan.eq(1))).remap([3],[49]).rename('classification_'+ano);
+  var restinga_herb = col7_ano.mask(col7_ano.eq(13).and(imagem_correcoes.eq(1))).remap([13],[50]).rename('classification_'+ano);
+
+  // Apply corrections based on the correction image
+  var corrige_campo = col7_ano.add(imagem_correcoes)
+  .remap([3,4,9,11,12,50,41,21,25,29,33,49,103,104,109,111,112,113,141,121,125,129,133,149],
+         [3,4,9,11,12,50,41,21,25,29,33,49,3,4,9,11,29,13,41,29,25,29,33,49])
+         .clip(converte12para29).rename('classification_'+ano);
+
+//  var corrige_campo = col7_ano.add(imagem_correcoes)
+//  .remap([3,4,9,11,12,50,41,21,25,29,33,103,104,109,111,112,113,141,121,125,129,133],
+//         [3,4,9,11,12,50,41,21,25,29,33,3,4,9,11,21,13,41,21,25,29,33])
+//         .clip(converter12para21).rename('classification_'+ano);
+//  var corrige_agric = col7_ano.add(imagem_correcoes)
+//  .remap([3,4,9,11,12,50,41,21,25,29,33,203,204,209,211,212,213,241,221,225,229,233],
+//         [3,4,9,11,12,50,41,21,25,29,33,3,4,9,11,12,13,21,21,25,29,33])
+//         .clip(remove_agricultura).rename('classification_'+ano);
+//  var corrige_reflo = col7_ano.add(imagem_correcoes)
+//  .remap([3,4,9,11,12,50,41,21,25,29,33,303,304,309,311,312,313,341,321,325,329,333],
+//         [3,4,9,11,12,50,41,21,25,29,33,3,4,3,11,12,13,41,21,25,29,33]).rename('classification_'+ano)
+//           .clip(converter9para3).rename('classification_'+ano);
+  
+  // Blend the original classification with the corrected classifications
+  var class_out = col7_ano//.blend(corrige_agric).blend(corrige_reflo)
+  .blend(restinga_abor).blend(restinga_herb).blend(corrige_campo);//.blend(mask_sav);
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_outTotal = class_out; }  
+  else {class_outTotal = class_outTotal.addBands(class_out); }
+}
+//print(class_outTotal);
+// Add the final classification image to the map
+Map.addLayer(class_outTotal, vis, 'class7 com restinga');
+// Map.addLayer(class_out2, vis, 'class_out2');
+
+// Define the final classification image
+var image = class_outTotal;
+
+// Define the years to process
+var years = [
+    1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992,
+    1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+    2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+    2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
+    2017, 2018, 2019, 2020, 2021, 2022, 2023
+    ];
+
+// Create a list of band names
+var bandNames = ee.List(
+    years.map(
+        function (year) {
+            return 'classification_' + String(year);
+        }
+    )
+);
+
+// Generate a histogram dictionary of band names and image band names
+var bandsOccurrence = ee.Dictionary(
+    bandNames.cat(image.bandNames()).reduce(ee.Reducer.frequencyHistogram())
+);
+
+print(bandsOccurrence);
+
+// Create a dictionary of bands with masked bands
+var bandsDictionary = bandsOccurrence.map(
+    function (key, value) {
+        return ee.Image(
+            ee.Algorithms.If(
+                ee.Number(value).eq(2),
+                // If the band occurs twice, select the band from the original image
+                image.select([key]).byte(),
+                // If the band occurs once, create a masked band
+                ee.Image().rename([key]).byte().updateMask(image.select(0))
+            )
+        );
+    }
+);
+
+// Convert the dictionary to an image
+var imageAllBands = ee.Image(
+    bandNames.iterate(
+        function (band, image) {
+            // Add the band from the dictionary to the image
+            return ee.Image(image).addBands(bandsDictionary.get(ee.String(band)));
+        },
+        // Initialize the image with an empty selection
+        ee.Image().select()
+    )
+);
+
+// Generate an image of pixel years
+var imagePixelYear = ee.Image.constant(years)
+    .updateMask(imageAllBands)
+    .rename(bandNames);
+        
+// Add connected pixels bands
+var imageFilledConnected = image.addBands(
+    image
+        .connectedPixelCount(100, true)
+        .rename(bandNames.map(
+            function (band) {
+                return ee.String(band).cat('_conn');
+            }
+        ))
+);
+
+print(imageFilledConnected);
+
+// Set the metadata for the final classification image
+imageFilledConnected = imageFilledConnected
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": imageFilledConnected.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});

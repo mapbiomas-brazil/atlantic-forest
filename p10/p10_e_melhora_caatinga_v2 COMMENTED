@@ -1,0 +1,122 @@
+var limite_MA = /* color: #d63000 */ee.Geometry.Polygon(
+        [[[-48.593359954293625, -30.678347823900353],
+          [-47.275000579293625, -25.525376684152373],
+          [-40.595313079293625, -23.284530667538736],
+          [-33.915625579293625, -6.580343714417967],
+          [-35.453711516793625, -4.217995607905081],
+          [-44.198828704293625, -17.856203449528717],
+          [-50.483008391793625, -17.52126295946964],
+          [-55.712500579293625, -21.74193426005608],
+          [-55.492774016793625, -29.72888025446976]]]);
+
+
+// Define the description of the process
+var descricao = 'Corrige Savana Caatinga';
+
+// Define the input and output versions
+var vesion_in = '144';
+var versao_out = '149';
+
+// Define the collection id
+var col = 9.0;
+
+// Define the input and output prefixes
+var prefixo_in = 'MA_col9_p10d_v';
+var prefixo_out = 'MA_col9_p10e_v';
+
+// Define the output directory
+var dirout = 'projects/mapbiomas-workspace/COLECAO9/pos_classificacao-ma/';
+
+// Import the palettes module
+var Palettes = require('users/mapbiomas/modules:Palettes.js');
+var palette = Palettes.get('classification8');
+var vis = {'min': 0,'max': 62,'palette': palette,'format': 'png'};
+
+// Load the classification images
+var class9 =  ee.Image(dirout+prefixo_in+vesion_in);
+Map.addLayer(class9.select('classification_1985'), vis, 'class8 ', false);
+
+var class8_caa =  ee.Image(dirout+prefixo_in+'26_caa');
+Map.addLayer(class8_caa.select('classification_1985'), vis, 'class8 caa ', false);
+
+// Select the classification for 2008 and clip it to the area where savanna should be corrected
+var corte_sav_2008 = class8_caa.select('classification_2008').clip(voltar21paraPassado);
+Map.addLayer(corte_sav_2008, vis, 'corte_sav_2008 ');
+
+// Convert the correction feature collection to an image
+var imagem_correcoes = converter4para21.reduceToImage({properties: ['reference'],reducer: ee.Reducer.first()});
+
+// Define the years to process
+var anos = [1985,1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,
+            1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,
+            2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,
+            2018,2019,2020,2021,2022,2023];
+
+//var anos = ['2023'];
+
+// Loop through the years and apply corrections
+for (var i_ano=0;i_ano<anos.length; i_ano++){  
+  var ano = anos[i_ano]; 
+  
+  // Select the classification for the current year
+  var class9_ano = class9.select('classification_'+ano);
+  
+  // Apply corrections based on the year
+  if (ano < 2008) {
+    // Blend the classification with the 2008 savanna correction and remap class 4
+    var corrige = class8_caa.select('classification_'+ano).blend(corte_sav_2008).remap([4],[100],0);
+    
+  } else {
+    // Remap class 4
+    var corrige = class8_caa.select('classification_'+ano).remap([4],[100]);
+  }
+  
+  // Apply corrections and remap classes
+  var class9_ano_corr = class9_ano.add(corrige).remap([ 3, 4,11,12,50,29,49,21,22, 103, 104,111,112,150,129,149,121,122],
+                                                      [ 3, 4,11,12,50,29,49,21,22,   3,   4,  1,  2,  0,  9,  9,  4, 22]).rename('classification_'+ano);
+
+  // Blend the original classification with the corrected classification and the correction image
+  var class9_ano_corr2 = class9_ano.blend(class9_ano_corr).blend(imagem_correcoes);
+
+  // Combine the corrected classifications for all years
+  if (i_ano == 0){ var class_outTotal = class9_ano_corr2; }  
+  else {class_outTotal = class_outTotal.addBands(class9_ano_corr2); }
+}
+
+// Add the original and corrected classifications to the map
+Map.addLayer(class_outTotal, {}, 'class_outTotal', false);
+Map.addLayer(class9.select('classification_1990'), vis, 'class9', true);
+Map.addLayer(class_outTotal.select('classification_1990'), vis, 'class_final', true);
+
+// Load the biomes and regions feature collections
+var biomas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/biomas_IBGE_250mil');
+Map.addLayer(ee.Image(0).mask(0).paint(biomas, 'AA0000', 2), {'palette':'000000','opacity': 0.6}, 'biomas', true);
+
+var regioesCollection = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/Mata_Atlantica_regions_col6_area2000');
+Map.addLayer(ee.Image(0).mask(0).paint(regioesCollection, 'AA0000', 2), {'palette':'000000','opacity': 0.6}, 'regioes', false);
+
+// Add the regions feature collection to the map
+Map.addLayer(regioesCollection);
+
+// Set the metadata for the final classification image
+class_outTotal = class_outTotal
+.set('territory', 'BRAZIL')
+.set('biome', 'MATAATLANTICA')
+.set('source', 'arcplan')
+.set('version', versao_out)
+.set('year', versao_out)
+.set('collection_id', col)
+.set('description', descricao);
+
+// Export the final classification image to an asset
+Export.image.toAsset({
+    "image": class_outTotal.toInt8(),
+    'description': prefixo_out+versao_out,
+    'assetId': dirout+prefixo_out+versao_out,
+    "scale": 30,
+    "pyramidingPolicy": {
+        '.default': 'mode'
+    },
+    "maxPixels": 1e13,
+    "region": limite_MA
+});
